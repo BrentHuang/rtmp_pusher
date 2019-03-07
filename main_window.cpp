@@ -5,12 +5,15 @@
 #ifdef __cplusplus
 extern "C" {
 #include <libavformat/avformat.h>
+#include <libavdevice/avdevice.h>
 #endif
 #if __cplusplus
 }
 #endif
 
 #include <chrono>
+#include <QCameraInfo>
+#include <QCamera>
 
 MainWindow*           gpMainFrame = NULL;
 
@@ -47,6 +50,8 @@ MainWindow::MainWindow(QWidget* parent) :
 {
     ui->setupUi(this);
     gpMainFrame = this;
+
+    avdevice_register_all();
 }
 
 MainWindow::~MainWindow()
@@ -57,16 +62,28 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_actionDevices_triggered()
 {
+    AVFormatContext* pFmtCtx = avformat_alloc_context();
+    AVDictionary* options = NULL;
+    av_dict_set(&options, "list_devices", "true", 0);
+    AVInputFormat* iformat = av_find_input_format("dshow");
+    printf("Device Info=============\n");
+    avformat_open_input(&pFmtCtx, "video=dummy", iformat, &options);
+    printf("========================\n");
 
 // 开始采集
 
 //    m_InputStream.SetVideoCaptureDevice(T2A((LPTSTR)(LPCTSTR)dlg.m_strVideoDevice));
 //    m_InputStream.SetAudioCaptureDevice(T2A((LPTSTR)(LPCTSTR)dlg.m_strAudioDevice));
 
+//    m_InputStream.SetVideoCaptureDevice(QCameraInfo::defaultCamera().description().toStdString());
+
+//    QCamera* camera = new QCamera(QCameraInfo::defaultCamera());
+//    camera->start();
+
     OnStartStream();
 
 // 停止采集
-    OnStopStream();
+//    OnStopStream();
 
 
 }

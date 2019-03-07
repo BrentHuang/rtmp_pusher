@@ -8,6 +8,9 @@ extern "C" {
 }
 #endif
 
+#include <qsystemdetection.h>
+#include <QDebug>
+
 //static std::string AnsiToUTF8(const char* _ansi, int _ansi_len)
 //{
 //    std::string str_utf8("");
@@ -93,6 +96,7 @@ void  AVInputStream::SetAudioCaptureCB(AudioCaptureCB pFuncCB)
 void  AVInputStream::SetVideoCaptureDevice(std::string device_name)
 {
     m_video_device = device_name;
+    qDebug() << QString::fromStdString(m_video_device);
 }
 
 void  AVInputStream::SetAudioCaptureDevice(std::string device_name)
@@ -113,7 +117,17 @@ bool  AVInputStream::OpenInputStream()
     int i;
 
     //打开Directshow设备前需要调用FFmpeg的avdevice_register_all函数，否则下面返回失败
+#ifdef Q_OS_LINUX
+    m_pInputFormat = av_find_input_format("fbdev");
+#else Q_OS_WIN
     m_pInputFormat = av_find_input_format("dshow");
+#endif
+
+    if (nullptr == m_pInputFormat)
+    {
+        return false;
+    }
+
 //    ASSERT(m_pInputFormat != NULL);
 
     // Set device params
@@ -134,6 +148,7 @@ bool  AVInputStream::OpenInputStream()
         if ((res = avformat_open_input(&m_pVidFmtCtx, device_name_utf8.c_str(), m_pInputFormat, &device_param)) != 0)
         {
 //            ATLTRACE("Couldn't open input video stream.（无法打开输入流）\n");
+            qDebug() << res;
             return false;
         }
         //input video initialize

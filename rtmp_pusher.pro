@@ -35,6 +35,7 @@ win32 {
     LIBS += -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavcodec \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavformat \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavutil \
+        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavdevice \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lswscale \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lswresample
 }
@@ -54,6 +55,9 @@ unix:!macx {
     LIBS += -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lavcodec \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lavformat \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lavutil \
+        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lavdevice \
+        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lavfilter \
+        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lpostproc \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lswscale \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lswresample \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/x264/lib -lx264 \
