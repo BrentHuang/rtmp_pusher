@@ -62,10 +62,14 @@ unix:!macx {
 
 SOURCES += \
         main.cpp \
-        main_window.cpp
+        main_window.cpp \
+    av_input_stream.cpp \
+    av_output_stream.cpp
 
 HEADERS += \
-        main_window.h
+        main_window.h \
+    av_input_stream.h \
+    av_output_stream.h
 
 FORMS += \
         main_window.ui
