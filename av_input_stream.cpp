@@ -118,7 +118,7 @@ bool  AVInputStream::OpenInputStream()
 
     //打开Directshow设备前需要调用FFmpeg的avdevice_register_all函数，否则下面返回失败
 #ifdef Q_OS_LINUX
-    m_pInputFormat = av_find_input_format("fbdev");
+    m_pInputFormat = av_find_input_format("video4linux2");
 #else Q_OS_WIN
     m_pInputFormat = av_find_input_format("dshow");
 #endif
@@ -148,7 +148,7 @@ bool  AVInputStream::OpenInputStream()
         if ((res = avformat_open_input(&m_pVidFmtCtx, device_name_utf8.c_str(), m_pInputFormat, &device_param)) != 0)
         {
 //            ATLTRACE("Couldn't open input video stream.（无法打开输入流）\n");
-            qDebug() << res;
+            qDebug() << strerror(AVERROR(res));
             return false;
         }
         //input video initialize
