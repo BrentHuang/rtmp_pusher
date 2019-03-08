@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui multimedia multimediawidgets
+QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -68,12 +68,16 @@ SOURCES += \
         main.cpp \
         main_window.cpp \
     av_input_stream.cpp \
-    av_output_stream.cpp
+    av_output_stream.cpp \
+    DS_AudioVideoDevices.cpp \
+    MF_AudioVideoDevices.cpp
 
 HEADERS += \
         main_window.h \
     av_input_stream.h \
-    av_output_stream.h
+    av_output_stream.h \
+    DS_AudioVideoDevices.h \
+    MF_AudioVideoDevices.h
 
 FORMS += \
         main_window.ui

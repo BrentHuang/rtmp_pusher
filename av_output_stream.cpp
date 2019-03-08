@@ -256,6 +256,7 @@ bool AVOutputStream::OpenOutputStream(const char* out_path)
 //
 int AVOutputStream::write_video_frame(AVStream* input_st, AVPixelFormat pix_fmt, AVFrame* pframe, int64_t lTimeStamp)
 {
+//    对传入的图像帧进行编码（H264），并且写到指定的封装文件
     if (video_st == NULL)
     {
         return -1;
@@ -355,6 +356,7 @@ int AVOutputStream::write_video_frame(AVStream* input_st, AVPixelFormat pix_fmt,
 //
 int  AVOutputStream::write_audio_frame(AVStream* input_st, AVFrame* input_frame, int64_t lTimeStamp)
 {
+//    对音频编码（AAC），然后输出到指定的封装文件
     if (audio_st == NULL)
     {
         return -1;

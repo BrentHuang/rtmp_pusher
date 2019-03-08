@@ -1,5 +1,6 @@
 ﻿#include "main_window.h"
 #include <QDebug>
+#include <QSysInfo>
 #include "ui_main_window.h"
 
 #ifdef __cplusplus
@@ -12,15 +13,58 @@ extern "C" {
 #endif
 
 #include <chrono>
-#include <QCameraInfo>
-#include <QCamera>
+#include "DS_AudioVideoDevices.h"
+#include "MF_AudioVideoDevices.h"
 
 MainWindow*           gpMainFrame = NULL;
 
-static int64_t timeGetTime()
+static int64_t TimeNowMSec()
 {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
                std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+
+/* 在Windows下可以使用2种方式读取摄像头数据：
+*  1.VFW: Video for Windows 屏幕捕捉设备。注意输入URL是设备的序号，
+*          从0至9。
+*  2.dshow: 使用Directshow。注意作者机器上的摄像头设备名称是
+*         “Integrated Camera”，使用的时候需要改成自己电脑上摄像头设
+*          备的名称。
+* 在Linux下可以使用video4linux2读取摄像头设备。
+* 在MacOS下可以使用avfoundation读取摄像头设备。
+*/
+void show_dshow_device()
+{
+//    {
+//        AVFormatContext* pFormatCtx = avformat_alloc_context();
+//        AVDictionary* options = NULL;
+//        av_dict_set(&options, "list_devices", "true", 0);
+//        AVInputFormat* iformat = av_find_input_format("dshow");
+//        printf("Device Info=============\n");
+//        avformat_open_input(&pFormatCtx, "video=dummy", iformat, &options);
+//        printf("========================\n");
+//    }
+
+//    {
+//        AVFormatContext* pFormatCtx = avformat_alloc_context();
+//        AVDictionary* options = NULL;
+//        av_dict_set(&options, "list_devices", "true", 0);
+//        AVInputFormat* iformat = av_find_input_format("dshow");
+//        printf("Device Info=============\n");
+//        avformat_open_input(&pFormatCtx, "audio=dummy", iformat, &options);
+//        printf("========================\n");
+//    }
+
+//    {
+//        AVFormatContext* pFormatCtx = avformat_alloc_context();
+//        AVDictionary* options = NULL;
+//        av_dict_set(&options, "list_options", "true", 0);
+//        AVInputFormat* iformat = av_find_input_format("dshow");
+//        printf("Device Option Info======\n");
+//        avformat_open_input(&pFormatCtx, "video=ICT Camera", iformat, &options);
+//        printf("========================\n");
+//    }
 }
 
 //采集到的视频图像回调
@@ -52,6 +96,7 @@ MainWindow::MainWindow(QWidget* parent) :
     gpMainFrame = this;
 
     avdevice_register_all();
+    show_dshow_device();
 }
 
 MainWindow::~MainWindow()
@@ -62,27 +107,61 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_actionDevices_triggered()
 {
-    for (auto ci : QCameraInfo::availableCameras())
+    std::vector<TDeviceName> video_devices;
+    std::vector<TDeviceName> audio_devices;
+    HRESULT hr;
+
+
+    if (QSysInfo::WV_WINDOWS10 == QSysInfo::windowsVersion())
     {
-        qDebug() << ci.description() << ci.deviceName() << ci.orientation() << ci.position();
+        hr = MF_GetAudioVideoInputDevices(video_devices, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
+        if (hr != S_OK)
+        {
+            qDebug() << "failed";
+            return;
+        }
+
+        hr = MF_GetAudioVideoInputDevices(audio_devices, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_AUDCAP_GUID);
+        if (hr != S_OK)
+        {
+            qDebug() << "failed";
+            return;
+        }
+    }
+    else
+    {
+        hr = DS_GetAudioVideoInputDevices(video_devices, CLSID_VideoInputDeviceCategory);
+        if (hr != S_OK)
+        {
+            qDebug() << "failed";
+            return;
+        }
+
+        hr = DS_GetAudioVideoInputDevices(audio_devices, CLSID_AudioInputDeviceCategory);
+        if (hr != S_OK)
+        {
+            qDebug() << "failed";
+            return;
+        }
     }
 
-//    AVFormatContext* pFmtCtx = avformat_alloc_context();
-//    AVDictionary* options = NULL;
-//    av_dict_set(&options, "list_devices", "true", 0);
-//    AVInputFormat* iformat = av_find_input_format("v4l2");
-//    printf("Device Info=============\n");
-//    avformat_open_input(&pFmtCtx, "video=/dev/video0", iformat, &options);
-//    printf("========================\n");
+    qDebug() << "video devices:";
+    for (int i = 0; i < (int) video_devices.size(); ++i)
+    {
+        qDebug() << i << QString::fromWCharArray(video_devices[i].FriendlyName)
+                 << QString::fromWCharArray(video_devices[i].MonikerName);
+    }
+
+    qDebug() << "audio devices:";
+    for (int i = 0; i < (int) audio_devices.size(); ++i)
+    {
+        qDebug() << i << QString::fromWCharArray(audio_devices[i].FriendlyName)
+                 << QString::fromWCharArray(audio_devices[i].MonikerName);
+    }
 
 // 开始采集
-    m_InputStream.SetVideoCaptureDevice("/dev/video0");
-
-//    m_InputStream.SetVideoCaptureDevice(T2A((LPTSTR)(LPCTSTR)dlg.m_strVideoDevice));
-//    m_InputStream.SetAudioCaptureDevice(T2A((LPTSTR)(LPCTSTR)dlg.m_strAudioDevice));
-
-//    QCamera* camera = new QCamera(QCameraInfo::defaultCamera());
-//    camera->start();
+    m_InputStream.SetVideoCaptureDevice(QString::fromWCharArray(video_devices[1].FriendlyName).toStdString());
+    m_InputStream.SetAudioCaptureDevice(QString::fromWCharArray(audio_devices[0].FriendlyName).toStdString());
 
     OnStartStream();
 
@@ -94,9 +173,11 @@ void MainWindow::on_actionDevices_triggered()
 
 void MainWindow::OnStartStream()
 {
+    // 首先设置了视频和音频的数据回调函数。当采集开始时，视频和音频数据就会传递给相应的函数去处理，在该程序中，回调函数主要对图像或音频进行编码，然后封装成FFmpeg支持的容器（例如mkv/avi/mpg/ts/mp4）
     m_InputStream.SetVideoCaptureCB(VideoCaptureCallback);
     m_InputStream.SetAudioCaptureCB(AudioCaptureCallback);
 
+    // 打开输入设备
     bool bRet;
     bRet = m_InputStream.OpenInputStream(); //初始化采集设备
     if (!bRet)
@@ -105,6 +186,8 @@ void MainWindow::OnStartStream()
         return;
     }
 
+    // 初始化输出流.
+    // 初始化输出流需要知道视频采集的分辨率，帧率，输出像素格式等信息，还有音频采集设备的采样率，声道数，Sample格式，而这些信息可通过CAVInputStream类的接口来获取到
     int cx, cy, fps;
     AVPixelFormat pixel_fmt;
     if (m_InputStream.GetVideoInputInfo(cx, cy, fps, pixel_fmt)) //获取视频采集源的信息
@@ -119,9 +202,8 @@ void MainWindow::OnStartStream()
         m_OutputStream.SetAudioCodecProp(AV_CODEC_ID_AAC, sample_rate, channels, 32000); //设置音频编码器属性
     }
 
-    //从Config.INI文件中读取录制文件路径
-//    P_GetProfileString(_T("Client"), "file_path", m_szFilePath, sizeof(m_szFilePath));
-
+    // 打开编码器和录制的容器
+    m_szFilePath = "D:\\mycamera.mkv";
     bRet  = m_OutputStream.OpenOutputStream(m_szFilePath.c_str()); //设置输出路径
     if (!bRet)
     {
@@ -134,9 +216,10 @@ void MainWindow::OnStartStream()
 //    m_Painter.SetStretch(TRUE); //是否缩放显示图像
 //    m_Painter.Open();
 
-    bRet = m_InputStream.StartCapture(); //开始采集
+    // 开始采集
+    bRet = m_InputStream.StartCapture();
 
-    StartTime = timeGetTime();
+    StartTime = TimeNowMSec();
 
     m_frmCount = 0;
     m_nFPS = 0;

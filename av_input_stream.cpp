@@ -102,6 +102,7 @@ void  AVInputStream::SetVideoCaptureDevice(std::string device_name)
 void  AVInputStream::SetAudioCaptureDevice(std::string device_name)
 {
     m_audio_device = device_name;
+    qDebug() << QString::fromStdString(m_audio_device);
 }
 
 
@@ -142,16 +143,14 @@ bool  AVInputStream::OpenInputStream()
 
         std::string device_name = "video=" + m_video_device;
 
-        std::string device_name_utf8 = device_name; //AnsiToUTF8(device_name.c_str(), device_name.length());  //转成UTF-8，解决设备名称包含中文字符出现乱码的问题
-
-        //Set own video device's name
-        if ((res = avformat_open_input(&m_pVidFmtCtx, device_name_utf8.c_str(), m_pInputFormat, &device_param)) != 0)
+        //Set own video device's name 打开设备，将设备名称作为参数传进去，注意这个设备名称需要转成UTF-8编码
+        if ((res = avformat_open_input(&m_pVidFmtCtx, device_name.c_str(), m_pInputFormat, &device_param)) != 0)
         {
 //            ATLTRACE("Couldn't open input video stream.（无法打开输入流）\n");
             qDebug() << strerror(AVERROR(res));
             return false;
         }
-        //input video initialize
+        //input video initialize 获取流的信息，得到视频流或音频流的索引号，之后会频繁用到这个索引号来定位视频和音频的Stream信息
         if (avformat_find_stream_info(m_pVidFmtCtx, NULL) < 0)
         {
 //            ATLTRACE("Couldn't find video stream information.（无法获取流信息）\n");
@@ -172,6 +171,8 @@ bool  AVInputStream::OpenInputStream()
 //            ATLTRACE("Couldn't find a video stream.（没有找到视频流）\n");
             return false;
         }
+
+        // 打开视频解码器或音频解码器，实际上，我们可以把设备也看成是一般的文件源，而文件一般采用某种封装格式，要播放出来需要进行解复用，分离成裸流，然后对单独的视频流、音频流进行解码。虽然采集出来的图像或音频都是未编码的，但是按照FFmpeg的常规处理流程，我们需要加上“解码”这个步骤。
         if (avcodec_open2(m_pVidFmtCtx->streams[m_videoindex]->codec, avcodec_find_decoder(m_pVidFmtCtx->streams[m_videoindex]->codec->codec_id), NULL) < 0)
         {
 //            ATLTRACE("Could not open video codec.（无法打开解码器）\n");
@@ -185,10 +186,8 @@ bool  AVInputStream::OpenInputStream()
     {
         std::string device_name = "audio=" + m_audio_device;
 
-        std::string device_name_utf8 = device_name; //AnsiToUTF8(device_name.c_str(), device_name.length());  //转成UTF-8，解决设备名称包含中文字符出现乱码的问题
-
         //Set own audio device's name
-        if (avformat_open_input(&m_pAudFmtCtx, device_name_utf8.c_str(), m_pInputFormat, &device_param) != 0)
+        if (avformat_open_input(&m_pAudFmtCtx, device_name.c_str(), m_pInputFormat, &device_param) != 0)
         {
 
 //            ATLTRACE("Couldn't open input audio stream.（无法打开输入流）\n");
@@ -227,6 +226,7 @@ bool  AVInputStream::OpenInputStream()
 
 bool  AVInputStream::StartCapture()
 {
+    // StartCapture函数分别建立了一个读取视频包和读取音频包的线程，两个线程各自独立工作，分别从视频采集设备，音频采集设备获取到数据，然后进行后续的处理。
     if (m_videoindex == -1 && m_audioindex == -1)
     {
 //        ATLTRACE("错误：你没有打开设备 \n");
@@ -317,6 +317,7 @@ int  AVInputStream::ReadVideoPackets()
     int encode_video = 1;
     int ret;
 
+//    不停地调用 av_read_frame读取采集到的图像帧，接着调用avcodec_decode_video2进行“解码”，这样获得了原始的图像，图像可能是RGB或YUV格式。解码后的图像通过m_pVideoCBFunc指向的回调函数回调给上层处理，回调函数里可进行后续的一些操作，比如对视频帧编码或直接显示。
     //start decode and encode
 
     while (encode_video)
