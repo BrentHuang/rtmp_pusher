@@ -64,7 +64,7 @@ int AVInputStream::Open()
 #if defined(Q_OS_WIN)
     input_fmt_ = av_find_input_format("dshow");
 #elif defined(Q_OS_LINUX)
-    m_pInputFormat = av_find_input_format("video4linux2");
+    input_fmt_ = av_find_input_format("video4linux2");
 #endif
 
     if (nullptr == input_fmt_)

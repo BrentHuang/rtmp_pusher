@@ -118,7 +118,8 @@ void MainWindow::on_actionDevices_triggered()
 
 void MainWindow::OnStartStream()
 {
-    input_stream_.SetVideoCaptureDevice(GLOBAL->config.GetVideoCaptureDevice());
+//    input_stream_.SetVideoCaptureDevice(GLOBAL->config.GetVideoCaptureDevice());
+    input_stream_.SetVideoCaptureDevice("/dev/video0");
     input_stream_.SetAudioCaptureDevice(GLOBAL->config.GetAudioCaptureDevice());
 
     // 设置视频和音频的数据回调函数。当采集开始时，视频和音频数据就会传递给相应的函数去处理，
@@ -151,7 +152,7 @@ void MainWindow::OnStartStream()
     }
 
     // 打开编码器和录制的容器
-    bool bRet  = output_stream_.OpenOutputStream(GLOBAL->config.GetFilePath()); //设置输出路径
+    bool bRet  = output_stream_.OpenOutputStream("/home/hgc/a.mkv"); //GLOBAL->config.GetFilePath()); //设置输出路径
     if (!bRet)
     {
 //        MessageBox(_T("初始化输出失败"), _T("提示"), MB_OK | MB_ICONWARNING);

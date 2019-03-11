@@ -28,7 +28,7 @@ public:
     void SetAudioCodecProp(AVCodecID codec_id, int sample_rate, int channels, int bit_rate);
 
     // 创建编码器和混合器，打开输出
-    int OpenOutputStream(const char* out_path);
+    int OpenOutputStream(const std::string& out_path);
 
 //       Write_video_frame和write_audio_frame是CAVOutputStream的两个很重要的函数，其中对音频包的处理略为复杂一些，
 //    主要是因为输入的音频和编码后的音频的frame_size不一样，中间需要一个Fifo作缓冲队列。
@@ -49,7 +49,7 @@ protected:
 
     AVStream* video_st;
     AVStream* audio_st;
-    AVFormatContext* ofmt_ctx;
+    AVFormatContext* ofmt_ctx_;
 
     AVCodecContext* pCodecCtx;
     AVCodecContext* pCodecCtx_a;

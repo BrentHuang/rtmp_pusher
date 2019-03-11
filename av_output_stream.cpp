@@ -23,7 +23,7 @@ AVOutputStream::AVOutputStream(void)
     audio_bit_rate_ = 32000;
     video_st = NULL;
     audio_st = NULL;
-    ofmt_ctx = NULL;
+    ofmt_ctx_ = NULL;
     pCodecCtx = NULL;
     pCodecCtx_a = NULL;
     pCodec = NULL;
@@ -71,16 +71,20 @@ void AVOutputStream::SetAudioCodecProp(AVCodecID codec_id, int sample_rate, int 
     audio_bit_rate_ = bit_rate;
 }
 
-int AVOutputStream::OpenOutputStream(const char* out_path)
+int AVOutputStream::OpenOutputStream(const std::string& out_path)
 {
     m_output_path = out_path;
 
-    //output initialize
-    avformat_alloc_output_context2(&ofmt_ctx, NULL, NULL, out_path);
+    // output initialize
+    int ret = avformat_alloc_output_context2(&ofmt_ctx_, nullptr, nullptr, out_path.c_str());
+    if (ret < 0)
+    {
+        return -1;
+    }
 
     if (video_codec_id_ != AV_CODEC_ID_NONE)
     {
-        //output video encoder initialize
+        // output video encoder initialize
         pCodec = avcodec_find_encoder(video_codec_id_);
         if (!pCodec)
         {
@@ -96,7 +100,7 @@ int AVOutputStream::OpenOutputStream(const char* out_path)
         pCodecCtx->bit_rate = video_bit_rate_;
         pCodecCtx->gop_size = gop_size_;
         /* Some formats want stream headers to be separate. */
-        if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+        if (ofmt_ctx_->oformat->flags & AVFMT_GLOBALHEADER)
         {
             pCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         }
@@ -139,7 +143,7 @@ int AVOutputStream::OpenOutputStream(const char* out_path)
         }
 
         //Add a new stream to output,should be called by the user before avformat_write_header() for muxing
-        video_st = avformat_new_stream(ofmt_ctx, pCodec);
+        video_st = avformat_new_stream(ofmt_ctx_, pCodec);
         if (video_st == NULL)
         {
             return false;
@@ -179,7 +183,7 @@ int AVOutputStream::OpenOutputStream(const char* out_path)
         }
 
         /* Some formats want stream headers to be separate. */
-        if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+        if (ofmt_ctx_->oformat->flags & AVFMT_GLOBALHEADER)
         {
             pCodecCtx_a->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         }
@@ -191,7 +195,7 @@ int AVOutputStream::OpenOutputStream(const char* out_path)
         }
 
         //Add a new stream to output,should be called by the user before avformat_write_header() for muxing
-        audio_st = avformat_new_stream(ofmt_ctx, pCodec_a);
+        audio_st = avformat_new_stream(ofmt_ctx_, pCodec_a);
         if (audio_st == NULL)
         {
             return false;
@@ -220,17 +224,17 @@ int AVOutputStream::OpenOutputStream(const char* out_path)
     }
 
     //Open output URL,set before avformat_write_header() for muxing
-    if (avio_open(&ofmt_ctx->pb, out_path, AVIO_FLAG_READ_WRITE) < 0)
+    if (avio_open(&ofmt_ctx_->pb, out_path.c_str(), AVIO_FLAG_READ_WRITE) < 0)
     {
 //        ATLTRACE("Failed to open output file! (输出文件打开失败！)\n");
         return false;
     }
 
     //Show some Information
-    av_dump_format(ofmt_ctx, 0, out_path, 1);
+    av_dump_format(ofmt_ctx_, 0, out_path.c_str(), 1);
 
     //Write File Header
-    avformat_write_header(ofmt_ctx, NULL);
+    avformat_write_header(ofmt_ctx_, NULL);
 
     m_vid_framecnt = 0;
     m_aud_framecnt = 0;
@@ -325,7 +329,7 @@ int AVOutputStream::write_video_frame(AVStream* input_st, AVPixelFormat pix_fmt,
         //if ((pts_time > now_time) && ((vid_next_pts + pts_time - now_time)<aud_next_pts))
         //  av_usleep(pts_time - now_time);
 
-        ret = av_interleaved_write_frame(ofmt_ctx, &enc_pkt);
+        ret = av_interleaved_write_frame(ofmt_ctx_, &enc_pkt);
         if (ret < 0)
         {
             char tmpErrString[128] = {0};
@@ -559,7 +563,7 @@ int  AVOutputStream::write_audio_frame(AVStream* input_st, AVFrame* input_frame,
             //if ((pts_time > now_time) && ((aud_next_pts + pts_time - now_time)<vid_next_pts))
             //  av_usleep(pts_time - now_time);
 
-            if ((ret = av_interleaved_write_frame(ofmt_ctx, &output_packet)) < 0)
+            if ((ret = av_interleaved_write_frame(ofmt_ctx_, &output_packet)) < 0)
             {
                 char tmpErrString[128] = {0};
 //                ATLTRACE("Could not write audio frame, error: %s\n", av_make_error_string(tmpErrString, AV_ERROR_MAX_STRING_SIZE, ret));
@@ -584,12 +588,12 @@ int  AVOutputStream::write_audio_frame(AVStream* input_st, AVFrame* input_frame,
 
 void  AVOutputStream::CloseOutput()
 {
-    if (ofmt_ctx != NULL)
+    if (ofmt_ctx_ != NULL)
     {
         if (video_st != NULL || audio_st != NULL)
         {
             //Write file trailer
-            av_write_trailer(ofmt_ctx);
+            av_write_trailer(ofmt_ctx_);
         }
     }
 
@@ -620,17 +624,20 @@ void  AVOutputStream::CloseOutput()
         av_audio_fifo_free(m_fifo);
         m_fifo = NULL;
     }
-    if (ofmt_ctx)
+    if (ofmt_ctx_)
     {
-        avio_close(ofmt_ctx->pb);
+        avio_close(ofmt_ctx_->pb);
     }
 
-    avformat_free_context(ofmt_ctx);
+    if (ofmt_ctx_ != nullptr)
+    {
+        avformat_free_context(ofmt_ctx_);
+    }
 
     video_codec_id_ = AV_CODEC_ID_NONE;
     audio_codec_id_ = AV_CODEC_ID_NONE;
 
-    ofmt_ctx = NULL;
+    ofmt_ctx_ = NULL;
     video_st = NULL;
     audio_st = NULL;
 }
