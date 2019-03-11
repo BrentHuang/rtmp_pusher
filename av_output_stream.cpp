@@ -11,16 +11,16 @@ extern "C" {
 
 AVOutputStream::AVOutputStream(void)
 {
-    m_video_codec_id = AV_CODEC_ID_NONE;
-    m_audio_codec_id = AV_CODEC_ID_NONE;
+    video_codec_id_ = AV_CODEC_ID_NONE;
+    audio_codec_id_ = AV_CODEC_ID_NONE;
     m_out_buffer = NULL;
-    m_width = 320;
-    m_height = 240;
-    m_framerate = 25;
-    m_video_bitrate = 500000;
-    m_samplerate = 0;
-    m_channels = 1;
-    m_audio_bitrate = 32000;
+    width_ = 320;
+    height_ = 240;
+    frame_rate_ = 25;
+    video_bit_rate_ = 500000;
+    sample_rate_ = 0;
+    channels_ = 1;
+    audio_bit_rate_ = 32000;
     video_st = NULL;
     audio_st = NULL;
     ofmt_ctx = NULL;
@@ -53,41 +53,35 @@ AVOutputStream::~AVOutputStream(void)
 {
 }
 
-
-
-//初始化视频编码器
-void AVOutputStream::SetVideoCodecProp(AVCodecID codec_id, int framerate, int bitrate, int gopsize, int width, int height)
+void AVOutputStream::SetVideoCodecProp(AVCodecID codec_id, int frame_rate, int bit_rate, int gop_size, int width, int height)
 {
-    m_video_codec_id = codec_id;
-    m_width = width;
-    m_height = height;
-    m_framerate = ((framerate == 0) ? 10 : framerate);
-    m_video_bitrate = bitrate;
-    m_gopsize = gopsize;
+    video_codec_id_ = codec_id;
+    width_ = width;
+    height_ = height;
+    frame_rate_ = ((frame_rate == 0) ? 10 : frame_rate);
+    video_bit_rate_ = bit_rate;
+    gop_size_ = gop_size;
 }
 
-//初始化音频编码器
-void AVOutputStream::SetAudioCodecProp(AVCodecID codec_id, int samplerate, int channels, int bitrate)
+void AVOutputStream::SetAudioCodecProp(AVCodecID codec_id, int sample_rate, int channels, int bit_rate)
 {
-    m_audio_codec_id = codec_id;
-    m_samplerate = samplerate;
-    m_channels = channels;
-    m_audio_bitrate = bitrate;
+    audio_codec_id_ = codec_id;
+    sample_rate_ = sample_rate;
+    channels_ = channels;
+    audio_bit_rate_ = bit_rate;
 }
 
-
-//创建编码器和混合器
-bool AVOutputStream::OpenOutputStream(const char* out_path)
+int AVOutputStream::OpenOutputStream(const char* out_path)
 {
     m_output_path = out_path;
 
     //output initialize
     avformat_alloc_output_context2(&ofmt_ctx, NULL, NULL, out_path);
 
-    if (m_video_codec_id != 0)
+    if (video_codec_id_ != AV_CODEC_ID_NONE)
     {
         //output video encoder initialize
-        pCodec = avcodec_find_encoder(m_video_codec_id);
+        pCodec = avcodec_find_encoder(video_codec_id_);
         if (!pCodec)
         {
 //            ATLTRACE("Can not find output video encoder! (没有找到合适的编码器！)\n");
@@ -95,12 +89,12 @@ bool AVOutputStream::OpenOutputStream(const char* out_path)
         }
         pCodecCtx = avcodec_alloc_context3(pCodec);
         pCodecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
-        pCodecCtx->width = m_width;
-        pCodecCtx->height = m_height;
+        pCodecCtx->width = width_;
+        pCodecCtx->height = height_;
         pCodecCtx->time_base.num = 1;
-        pCodecCtx->time_base.den = m_framerate;
-        pCodecCtx->bit_rate = m_video_bitrate;
-        pCodecCtx->gop_size = m_gopsize;
+        pCodecCtx->time_base.den = frame_rate_;
+        pCodecCtx->bit_rate = video_bit_rate_;
+        pCodecCtx->gop_size = gop_size_;
         /* Some formats want stream headers to be separate. */
         if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
         {
@@ -111,7 +105,7 @@ bool AVOutputStream::OpenOutputStream(const char* out_path)
         AVDictionary* param = 0;
 
         //set H264 codec param
-        if (m_video_codec_id == AV_CODEC_ID_H264)
+        if (video_codec_id_ == AV_CODEC_ID_H264)
         {
             //pCodecCtx->me_range = 16;
             //pCodecCtx->max_qdiff = 4;
@@ -151,7 +145,7 @@ bool AVOutputStream::OpenOutputStream(const char* out_path)
             return false;
         }
         video_st->time_base.num = 1;
-        video_st->time_base.den = m_framerate;
+        video_st->time_base.den = frame_rate_;
         video_st->codec = pCodecCtx;
 
         //Initialize the buffer to store YUV frames to be encoded.
@@ -160,25 +154,25 @@ bool AVOutputStream::OpenOutputStream(const char* out_path)
         avpicture_fill((AVPicture*)pFrameYUV, m_out_buffer, AV_PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
     }
 
-    if (m_audio_codec_id != 0)
+    if (audio_codec_id_ != AV_CODEC_ID_NONE)
     {
         //output audio encoder initialize
-        pCodec_a = avcodec_find_encoder(m_audio_codec_id);
+        pCodec_a = avcodec_find_encoder(audio_codec_id_);
         if (!pCodec_a)
         {
 //            ATLTRACE("Can not find output audio encoder! (没有找到合适的编码器！)\n");
             return false;
         }
         pCodecCtx_a = avcodec_alloc_context3(pCodec_a);
-        pCodecCtx_a->channels = m_channels;
-        pCodecCtx_a->channel_layout = av_get_default_channel_layout(m_channels);
-        pCodecCtx_a->sample_rate = m_samplerate;
+        pCodecCtx_a->channels = channels_;
+        pCodecCtx_a->channel_layout = av_get_default_channel_layout(channels_);
+        pCodecCtx_a->sample_rate = sample_rate_;
         pCodecCtx_a->sample_fmt = pCodec_a->sample_fmts[0];
-        pCodecCtx_a->bit_rate = m_audio_bitrate;
+        pCodecCtx_a->bit_rate = audio_bit_rate_;
         pCodecCtx_a->time_base.num = 1;
         pCodecCtx_a->time_base.den = pCodecCtx_a->sample_rate;
 
-        if (m_audio_codec_id == AV_CODEC_ID_AAC)
+        if (audio_codec_id_ == AV_CODEC_ID_AAC)
         {
             /** Allow the use of the experimental AAC encoder */
             pCodecCtx_a->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
@@ -275,7 +269,7 @@ int AVOutputStream::write_video_frame(AVStream* input_st, AVPixelFormat pix_fmt,
     if (img_convert_ctx == NULL)
     {
         //camera data may has a pix fmt of RGB or sth else,convert it to YUV420
-        img_convert_ctx = sws_getContext(m_width, m_height,
+        img_convert_ctx = sws_getContext(width_, height_,
                                          pix_fmt, pCodecCtx->width, pCodecCtx->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
     }
 
@@ -633,8 +627,8 @@ void  AVOutputStream::CloseOutput()
 
     avformat_free_context(ofmt_ctx);
 
-    m_video_codec_id = AV_CODEC_ID_NONE;
-    m_audio_codec_id = AV_CODEC_ID_NONE;
+    video_codec_id_ = AV_CODEC_ID_NONE;
+    audio_codec_id_ = AV_CODEC_ID_NONE;
 
     ofmt_ctx = NULL;
     video_st = NULL;

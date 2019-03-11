@@ -17,19 +17,18 @@ extern "C" {
 class AVOutputStream
 {
 public:
-    AVOutputStream(void);
-    ~AVOutputStream(void);
+    AVOutputStream();
+    ~AVOutputStream();
 
 public:
+    // 初始化视频编码器
+    void SetVideoCodecProp(AVCodecID codec_id, int frame_rate, int bit_rate, int gop_size, int width, int height);
 
-    //初始化视频编码器
-    void SetVideoCodecProp(AVCodecID codec_id, int framerate, int bitrate, int gopsize, int width, int height);
+    // 初始化音频编码器
+    void SetAudioCodecProp(AVCodecID codec_id, int sample_rate, int channels, int bit_rate);
 
-    //初始化音频编码器
-    void SetAudioCodecProp(AVCodecID codec_id, int samplerate, int channels, int bitrate);
-
-    //创建编码器和混合器，打开输出
-    bool  OpenOutputStream(const char* out_path);
+    // 创建编码器和混合器，打开输出
+    int OpenOutputStream(const char* out_path);
 
 //       Write_video_frame和write_audio_frame是CAVOutputStream的两个很重要的函数，其中对音频包的处理略为复杂一些，
 //    主要是因为输入的音频和编码后的音频的frame_size不一样，中间需要一个Fifo作缓冲队列。
@@ -83,17 +82,17 @@ protected:
 public:
     std::string     m_output_path; //输出路径
 
-    AVCodecID  m_video_codec_id;
-    AVCodecID  m_audio_codec_id;
+    AVCodecID  video_codec_id_;
+    AVCodecID  audio_codec_id_;
 
-    int m_width, m_height;
-    int m_framerate;
-    int m_video_bitrate;
-    int m_gopsize;
+    int width_, height_;
+    int frame_rate_;
+    int video_bit_rate_;
+    int gop_size_;
 
-    int m_samplerate;
-    int m_channels;
-    int m_audio_bitrate;
+    int sample_rate_;
+    int channels_;
+    int audio_bit_rate_;
 
 };
 

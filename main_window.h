@@ -32,9 +32,6 @@ public:
 private:
     Ui::MainWindow* ui;
 
-    std::string video_input_device_;
-    std::string audio_input_device_;
-    std::string record_file_path_;
     int64_t              m_frmCount;
     int64_t              m_nFPS;
 };

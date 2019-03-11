@@ -1,6 +1,7 @@
 #include "devices_dialog.h"
 #include <QDebug>
 #include <QOperatingSystemVersion>
+#include <QFileDialog>
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,14 +73,19 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
         ui->comboBox_Audio->addItem(QString::fromWCharArray(audio_device_vec[i].FriendlyName));
     }
 
-    if (last_video_device_.length() > 0)
+    if (!last_video_device_.isEmpty())
     {
         ui->comboBox_Video->setCurrentText(last_video_device_);
     }
 
-    if (last_audio_device_.length() > 0)
+    if (!last_audio_device_.isEmpty())
     {
         ui->comboBox_Audio->setCurrentText(last_audio_device_);
+    }
+
+    if (!GLOBAL->config.GetFilePath().empty())
+    {
+        ui->textBrowser_FilePath->setText(QString::fromStdString(GLOBAL->config.GetFilePath()));
     }
 
     if (GLOBAL->config.Started())
@@ -125,4 +131,14 @@ void DevicesDialog::on_pushButton_Stop_clicked()
 {
     close();
     emit SIGNAL_CENTER->StopStream();
+}
+
+void DevicesDialog::on_pushButton_Dir_clicked()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, "请选择文件保存路径");
+    if (!dir.isEmpty())
+    {
+        GLOBAL->config.SetFilePath(dir.toStdString() + "/my.mkv");
+        ui->textBrowser_FilePath->setText(QString::fromStdString(GLOBAL->config.GetFilePath()));
+    }
 }

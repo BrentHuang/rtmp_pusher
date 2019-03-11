@@ -30,6 +30,18 @@ std::string Config::GetAudioCaptureDevice()
     return audio_device_;
 }
 
+void Config::SetFilePath(const std::string& file_path)
+{
+    QMutexLocker lock(&mutex_);
+    file_path_ = file_path;
+}
+
+std::string Config::GetFilePath()
+{
+    QMutexLocker lock(&mutex_);
+    return file_path_;
+}
+
 void Config::SetStarted(bool flag)
 {
     QMutexLocker lock(&mutex_);

@@ -338,6 +338,8 @@ int AVInputStream::ReadVideoPackets()
         ret = avcodec_receive_frame(video_fmt_ctx_->streams[pkt.stream_index]->codec, frame);
         if (0 == ret)
         {
+            // TODO 视频转成yuv420p
+
             if (video_cb_ != nullptr)
             {
                 QMutexLocker lock(&write_file_mutex_);
@@ -397,6 +399,8 @@ int AVInputStream::ReadAudioPackets()
         ret = avcodec_receive_frame(audio_fmt_ctx_->streams[pkt.stream_index]->codec, frame);
         if (0 == ret)
         {
+            // TODO 音频转成pcm
+
             if (audio_cb_ != nullptr)
             {
                 QMutexLocker lock(&write_file_mutex_);

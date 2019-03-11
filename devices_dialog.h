@@ -21,6 +21,7 @@ private slots:
     void on_comboBox_Audio_currentIndexChanged(const QString& arg1);
     void on_pushButton_Start_clicked();
     void on_pushButton_Stop_clicked();
+    void on_pushButton_Dir_clicked();
 
 private:
     Ui::DevicesDialog* ui;

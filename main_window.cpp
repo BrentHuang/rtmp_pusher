@@ -151,8 +151,7 @@ void MainWindow::OnStartStream()
     }
 
     // 打开编码器和录制的容器
-    record_file_path_ = "D:\\mycamera.mkv";
-    bool bRet  = output_stream_.OpenOutputStream(record_file_path_.c_str()); //设置输出路径
+    bool bRet  = output_stream_.OpenOutputStream(GLOBAL->config.GetFilePath()); //设置输出路径
     if (!bRet)
     {
 //        MessageBox(_T("初始化输出失败"), _T("提示"), MB_OK | MB_ICONWARNING);
