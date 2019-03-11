@@ -5,7 +5,7 @@
 
 #if defined(Q_OS_WIN)
 #include <vector>
-#include <windows.h>
+#include <Windows.h>
 #include <mfidl.h>
 
 #ifndef MACRO_GROUP_DEVICENAME
@@ -14,11 +14,11 @@
 #define MAX_FRIENDLY_NAME_LENGTH    128
 #define MAX_MONIKER_NAME_LENGTH     256
 
-typedef struct _TDeviceName
+struct DeviceCtx
 {
     WCHAR FriendlyName[MAX_FRIENDLY_NAME_LENGTH];   // 设备友好名
     WCHAR MonikerName[MAX_MONIKER_NAME_LENGTH];     // 设备Moniker名
-} TDeviceName;
+};
 #endif
 
 #ifdef __cplusplus
@@ -34,14 +34,14 @@ extern "C"
         MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_AUDCAP_GUID：获取音频输入设备列表
         MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID：获取视频输入设备列表
 返回值：
-    错误代码
+    错误代码，=0表示成功，否则失败
 说明：
     基于Media Foundation
     列表中的第一个设备为系统缺省设备
     capGetDriverDescription只能获得设备驱动名
     操作系统要求Windows 7及以上版本（关键）
 */
-HRESULT MF_GetAudioVideoInputDevices( std::vector<TDeviceName>& vectorDevices, REFGUID guidValue );
+int MFGetAVInputDevices(std::vector<DeviceCtx>& device_ctx_vec, REFGUID guid_value);
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,7 @@
 ﻿#include "main_window.h"
 #include <QDebug>
 #include <QSysInfo>
+#include <QOperatingSystemVersion>
 #include "ui_main_window.h"
 
 #ifdef __cplusplus
@@ -117,22 +118,18 @@ MainWindow::~MainWindow()
 void MainWindow::on_actionDevices_triggered()
 {
 #if defined(Q_OS_WIN)
-    std::vector<TDeviceName> video_devices;
-    std::vector<TDeviceName> audio_devices;
-    HRESULT hr;
+    std::vector<DeviceCtx> video_devices;
+    std::vector<DeviceCtx> audio_devices;
 
-
-    if (QSysInfo::WV_WINDOWS10 == QSysInfo::windowsVersion())
+    if (QOperatingSystemVersion::current() >= QOperatingSystemVersion::Windows10)
     {
-        hr = MF_GetAudioVideoInputDevices(video_devices, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
-        if (hr != S_OK)
+        if (MFGetAVInputDevices(video_devices, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID) != 0)
         {
             qDebug() << "failed";
             return;
         }
 
-        hr = MF_GetAudioVideoInputDevices(audio_devices, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_AUDCAP_GUID);
-        if (hr != S_OK)
+        if (MFGetAVInputDevices(audio_devices, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_AUDCAP_GUID) != 0)
         {
             qDebug() << "failed";
             return;
@@ -140,15 +137,13 @@ void MainWindow::on_actionDevices_triggered()
     }
     else
     {
-        hr = DS_GetAudioVideoInputDevices(video_devices, CLSID_VideoInputDeviceCategory);
-        if (hr != S_OK)
+        if (DSGetAVInputDevices(video_devices, CLSID_VideoInputDeviceCategory) != 0)
         {
             qDebug() << "failed";
             return;
         }
 
-        hr = DS_GetAudioVideoInputDevices(audio_devices, CLSID_AudioInputDeviceCategory);
-        if (hr != S_OK)
+        if (DSGetAVInputDevices(audio_devices, CLSID_AudioInputDeviceCategory) != 0)
         {
             qDebug() << "failed";
             return;
