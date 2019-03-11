@@ -60,6 +60,7 @@ protected:
     int audio_index_;
 
     int64_t start_time_; // 采集的起点时间，单位：毫秒
+
     std::thread* capture_video_thread_;
     std::thread* capture_audio_thread_;
     std::atomic_bool exit_thread_;

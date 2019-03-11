@@ -226,6 +226,7 @@ void AVInputStream::Close()
     audio_fmt_ctx_ = nullptr;
     audio_index_ = -1;
     input_fmt_ = nullptr;
+    start_time_ = 0;
 }
 
 int AVInputStream::StartCapture()
@@ -302,10 +303,11 @@ int AVInputStream::ReadVideoPackets()
     // 解码后的图像通过m_pVideoCBFunc指向的回调函数回调给上层处理，回调函数里可进行后续的一些操作，比如对视频帧编码或直接显示。
     while (true)
     {
-//        if (exit_thread_)
-//        {
-//            break;
-//        }
+        // TODO 读完所有的帧然后再退出
+        if (exit_thread_)
+        {
+            break;
+        }
 
         AVPacket pkt;
         av_init_packet(&pkt);
@@ -359,10 +361,11 @@ int AVInputStream::ReadAudioPackets()
 {
     while (true)
     {
-//        if (exit_thread_)
-//        {
-//            break;
-//        }
+        // TODO 读完所有的帧然后再退出
+        if (exit_thread_)
+        {
+            break;
+        }
 
         AVPacket pkt;
         av_init_packet(&pkt);

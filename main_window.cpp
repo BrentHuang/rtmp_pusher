@@ -104,6 +104,7 @@ MainWindow::MainWindow(QWidget* parent) :
 MainWindow::~MainWindow()
 {
     disconnect(SIGNAL_CENTER, &SignalCenter::StartStream, this, &MainWindow::OnStartStream);
+    disconnect(SIGNAL_CENTER, &SignalCenter::StopStream, this, &MainWindow::OnStopStream);
 
     OnStopStream();
     delete ui;
@@ -179,10 +180,6 @@ void MainWindow::OnStopStream()
     input_stream_.Close();
     output_stream_.CloseOutput();
 //    m_Painter.Close();
-
-//    TRACE("采集用时：%d 秒\n", (timeGetTime() - StartTime) / 1000);
-
-    StartTime = 0;
 
     GLOBAL->config.SetStarted(false);
 }
