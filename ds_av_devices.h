@@ -18,6 +18,7 @@ struct DeviceCtx
 {
     WCHAR FriendlyName[MAX_FRIENDLY_NAME_LENGTH];   // 设备友好名
     WCHAR MonikerName[MAX_MONIKER_NAME_LENGTH];     // 设备Moniker名
+    // TODO 摄像头支持的分辨率列表，帧率，pixel format；麦克风的采样率，采用精度，声道数
 };
 #endif
 

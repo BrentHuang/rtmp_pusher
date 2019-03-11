@@ -21,7 +21,6 @@ int MFGetAVInputDevices(std::vector<DeviceCtx>& device_ctx_vec, REFGUID guid_val
         return -1;
     }
 
-
     // 创建属性搜索页
     int ret = -1;
 

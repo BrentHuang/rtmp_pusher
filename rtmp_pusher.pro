@@ -70,17 +70,26 @@ SOURCES += \
     av_input_stream.cpp \
     av_output_stream.cpp \
     mf_av_devices.cpp \
-    ds_av_devices.cpp
+    ds_av_devices.cpp \
+    devices_dialog.cpp \
+    config.cpp \
+    signal_center.cpp
 
 HEADERS += \
         main_window.h \
     av_input_stream.h \
     av_output_stream.h \
     mf_av_devices.h \
-    ds_av_devices.h
+    ds_av_devices.h \
+    devices_dialog.h \
+    config.h \
+    signal_center.h \
+    singleton.h \
+    global.h
 
 FORMS += \
-        main_window.ui
+        main_window.ui \
+    devices_dialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

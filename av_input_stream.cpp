@@ -1,4 +1,6 @@
 ﻿#include "av_input_stream.h"
+#include <QDebug>
+#include <qsystemdetection.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -8,372 +10,346 @@ extern "C" {
 }
 #endif
 
-#include <qsystemdetection.h>
-#include <QDebug>
-
-//static std::string AnsiToUTF8(const char* _ansi, int _ansi_len)
-//{
-//    std::string str_utf8("");
-//    wchar_t* pUnicode = NULL;
-//    uint8_t* pUtfData = NULL;
-//    do
-//    {
-//        int unicodeNeed = MultiByteToWideChar(CP_ACP, 0, _ansi, _ansi_len, NULL, 0);
-//        pUnicode = new wchar_t[unicodeNeed + 1];
-//        memset(pUnicode, 0, (unicodeNeed + 1)*sizeof(wchar_t));
-//        int unicodeDone = MultiByteToWideChar(CP_ACP, 0, _ansi, _ansi_len, (LPWSTR)pUnicode, unicodeNeed);
-
-//        if (unicodeDone != unicodeNeed)
-//        {
-//            break;
-//        }
-
-//        int utfNeed = WideCharToMultiByte(CP_UTF8, 0, (LPWSTR)pUnicode, unicodeDone, (char*)pUtfData, 0, NULL, NULL);
-//        pUtfData = new BYTE[utfNeed + 1];
-//        memset(pUtfData, 0, utfNeed + 1);
-//        int utfDone = WideCharToMultiByte(CP_UTF8, 0, (LPWSTR)pUnicode, unicodeDone, (char*)pUtfData, utfNeed, NULL, NULL);
-
-//        if (utfNeed != utfDone)
-//        {
-//            break;
-//        }
-//        str_utf8.assign((char*)pUtfData);
-//    } while (false);
-
-//    if (pUnicode)
-//    {
-//        delete[] pUnicode;
-//    }
-//    if (pUtfData)
-//    {
-//        delete[] pUtfData;
-//    }
-
-//    return str_utf8;
-//}
-
-AVInputStream::AVInputStream(void)
+AVInputStream::AVInputStream() : video_device_(), audio_device_(), write_file_mutex_()
 {
-    m_hCapVideoThread = NULL;
-    m_hCapAudioThread = NULL;
-    m_exit_thread = false;
-
-    m_pVidFmtCtx = NULL;
-    m_pAudFmtCtx = NULL;
-    m_pInputFormat = NULL;
-
-    dec_pkt = NULL;
-
-    m_pVideoCBFunc = NULL;
-    m_pAudioCBFunc = NULL;
-
-    m_videoindex = -1;
-    m_audioindex = -1;
-
-    m_start_time = 0;
-
-    //avcodec_register_all();
-//   av_register_all();
-    //avdevice_register_all();
+    video_cb_ = nullptr;
+    audio_cb_ = nullptr;
+    input_fmt_ = nullptr;
+    video_fmt_ctx_ = nullptr;
+    video_index_ = -1;
+    audio_fmt_ctx_ = nullptr;
+    audio_index_ = -1;
+    start_time_ = 0;
+    capture_video_thread_ = nullptr;
+    capture_audio_thread_ = nullptr;
+    exit_thread_ = false;
 }
 
-AVInputStream::~AVInputStream(void)
+AVInputStream::~AVInputStream()
 {
-    CloseInputStream();
+    Close();
 }
 
-
-void  AVInputStream::SetVideoCaptureCB(VideoCaptureCB pFuncCB)
+void AVInputStream::SetVideoCaptureDevice(const std::string& device_name)
 {
-    m_pVideoCBFunc = pFuncCB;
+    video_device_ = device_name;
+    qDebug() << QString::fromStdString(video_device_);
 }
 
-void  AVInputStream::SetAudioCaptureCB(AudioCaptureCB pFuncCB)
+void AVInputStream::SetAudioCaptureDevice(const std::string& device_name)
 {
-    m_pAudioCBFunc = pFuncCB;
+    audio_device_ = device_name;
+    qDebug() << QString::fromStdString(audio_device_);
 }
 
-void  AVInputStream::SetVideoCaptureDevice(std::string device_name)
+void AVInputStream::SetVideoCaptureCB(VideoCaptureCB cb)
 {
-    m_video_device = device_name;
-    qDebug() << QString::fromStdString(m_video_device);
+    video_cb_ = cb;
 }
 
-void  AVInputStream::SetAudioCaptureDevice(std::string device_name)
+void AVInputStream::SetAudioCaptureCB(AudioCaptureCB cb)
 {
-    m_audio_device = device_name;
-    qDebug() << QString::fromStdString(m_audio_device);
+    audio_cb_ = cb;
 }
 
-
-bool  AVInputStream::OpenInputStream()
+int AVInputStream::Open()
 {
-    if (m_video_device.empty() && m_audio_device.empty())
+    if (video_device_.empty() && audio_device_.empty())
     {
 //        ATLTRACE("you have not set any capture device \n");
-        return false;
+        return -1;
     }
 
-
-    int i;
-
-    //打开Directshow设备前需要调用FFmpeg的avdevice_register_all函数，否则下面返回失败
-#ifdef Q_OS_LINUX
+    // 打开Directshow设备前需要调用FFmpeg的avdevice_register_all函数，否则下面返回失败
+#if defined(Q_OS_WIN)
+    input_fmt_ = av_find_input_format("dshow");
+#elif defined(Q_OS_LINUX)
     m_pInputFormat = av_find_input_format("video4linux2");
-#else Q_OS_WIN
-    m_pInputFormat = av_find_input_format("dshow");
 #endif
 
-    if (nullptr == m_pInputFormat)
+    if (nullptr == input_fmt_)
     {
-        return false;
+        return -1;
     }
-
-//    ASSERT(m_pInputFormat != NULL);
 
     // Set device params
-    AVDictionary* device_param = 0;
-    //if not setting rtbufsize, error messages will be shown in cmd, but you can still watch or record the stream correctly in most time
-    //setting rtbufsize will erase those error messages, however, larger rtbufsize will bring latency
-    //av_dict_set(&device_param, "rtbufsize", "10M", 0);
+    AVDictionary* device_param = nullptr;
 
-    if (!m_video_device.empty())
+    // if not setting rtbufsize, error messages will be shown in cmd, but you can still watch or record the stream correctly in most time
+    // setting rtbufsize will erase those error messages, however, larger rtbufsize will bring latency
+    av_dict_set(&device_param, "rtbufsize", "10M", 0); // TODO
+
+    if (!video_device_.empty())
     {
-        int res = 0;
+        const std::string device_name = "video=" + video_device_;
 
-        std::string device_name = "video=" + m_video_device;
-
-        //Set own video device's name 打开设备，将设备名称作为参数传进去，注意这个设备名称需要转成UTF-8编码
-        if ((res = avformat_open_input(&m_pVidFmtCtx, device_name.c_str(), m_pInputFormat, &device_param)) != 0)
+        // Set own video device's name 打开设备，将设备名称作为参数传进去，注意这个设备名称需要转成UTF-8编码
+        int ret = avformat_open_input(&video_fmt_ctx_, device_name.c_str(), input_fmt_, &device_param);
+        if (ret != 0)
         {
 //            ATLTRACE("Couldn't open input video stream.（无法打开输入流）\n");
-            qDebug() << strerror(AVERROR(res));
-            return false;
+            return -1;
         }
-        //input video initialize 获取流的信息，得到视频流或音频流的索引号，之后会频繁用到这个索引号来定位视频和音频的Stream信息
-        if (avformat_find_stream_info(m_pVidFmtCtx, NULL) < 0)
+
+        // input video initialize 获取流的信息，得到视频流或音频流的索引号，之后会频繁用到这个索引号来定位视频和音频的Stream信息
+        ret = avformat_find_stream_info(video_fmt_ctx_, nullptr);
+        if (ret < 0) // TODO
         {
 //            ATLTRACE("Couldn't find video stream information.（无法获取流信息）\n");
-            return false;
+            return -1;
         }
-        m_videoindex = -1;
-        for (i = 0; i < m_pVidFmtCtx->nb_streams; i++)
+
+        video_index_ = -1;
+
+        for (int i = 0; i < (int) video_fmt_ctx_->nb_streams; ++i)
         {
-            if (m_pVidFmtCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+            if (AVMEDIA_TYPE_VIDEO == video_fmt_ctx_->streams[i]->codec->codec_type)
             {
-                m_videoindex = i;
+                video_index_ = i;
                 break;
             }
         }
 
-        if (m_videoindex == -1)
+        if (-1 == video_index_)
         {
 //            ATLTRACE("Couldn't find a video stream.（没有找到视频流）\n");
-            return false;
+            return -1;
         }
 
-        // 打开视频解码器或音频解码器，实际上，我们可以把设备也看成是一般的文件源，而文件一般采用某种封装格式，要播放出来需要进行解复用，分离成裸流，然后对单独的视频流、音频流进行解码。虽然采集出来的图像或音频都是未编码的，但是按照FFmpeg的常规处理流程，我们需要加上“解码”这个步骤。
-        if (avcodec_open2(m_pVidFmtCtx->streams[m_videoindex]->codec, avcodec_find_decoder(m_pVidFmtCtx->streams[m_videoindex]->codec->codec_id), NULL) < 0)
+        // 打开视频解码器或音频解码器，实际上，我们可以把设备也看成是一般的文件源，
+        // 而文件一般采用某种封装格式，要播放出来需要进行解复用，分离成裸流，然后对单独的视频流、音频流进行解码。
+        // 虽然采集出来的图像或音频都是未编码的，但是按照FFmpeg的常规处理流程，我们需要加上“解码”这个步骤。
+        ret = avcodec_open2(video_fmt_ctx_->streams[video_index_]->codec, avcodec_find_decoder(video_fmt_ctx_->streams[video_index_]->codec->codec_id), nullptr);
+        if (ret != 0)
         {
 //            ATLTRACE("Could not open video codec.（无法打开解码器）\n");
-            return false;
+            return -1;
         }
     }
 
-    //////////////////////////////////////////////////////////
-
-    if (!m_audio_device.empty())
+    if (!audio_device_.empty())
     {
-        std::string device_name = "audio=" + m_audio_device;
+        const std::string device_name = "audio=" + audio_device_;
 
-        //Set own audio device's name
-        if (avformat_open_input(&m_pAudFmtCtx, device_name.c_str(), m_pInputFormat, &device_param) != 0)
+        // Set own audio device's name
+        int ret = avformat_open_input(&audio_fmt_ctx_, device_name.c_str(), input_fmt_, &device_param);
+        if (ret != 0)
         {
-
 //            ATLTRACE("Couldn't open input audio stream.（无法打开输入流）\n");
-            return false;
+            return -1;
         }
 
-        //input audio initialize
-        if (avformat_find_stream_info(m_pAudFmtCtx, NULL) < 0)
+        // input audio initialize
+        ret = avformat_find_stream_info(audio_fmt_ctx_, nullptr);
+        if (ret < 0)
         {
 //            ATLTRACE("Couldn't find audio stream information.（无法获取流信息）\n");
-            return false;
+            return -1;
         }
-        m_audioindex = -1;
-        for (i = 0; i < m_pAudFmtCtx->nb_streams; i++)
+
+        audio_index_ = -1;
+        for (int i = 0; i < (int) audio_fmt_ctx_->nb_streams; ++i)
         {
-            if (m_pAudFmtCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
+            if (AVMEDIA_TYPE_AUDIO == audio_fmt_ctx_->streams[i]->codec->codec_type)
             {
-                m_audioindex = i;
+                audio_index_ = i;
                 break;
             }
         }
-        if (m_audioindex == -1)
+
+        if (-1 == audio_index_)
         {
 //            ATLTRACE("Couldn't find a audio stream.（没有找到音频流）\n");
-            return false;
+            return -1;
         }
-        if (avcodec_open2(m_pAudFmtCtx->streams[m_audioindex]->codec, avcodec_find_decoder(m_pAudFmtCtx->streams[m_audioindex]->codec->codec_id), NULL) < 0)
+
+        ret = avcodec_open2(audio_fmt_ctx_->streams[audio_index_]->codec, avcodec_find_decoder(audio_fmt_ctx_->streams[audio_index_]->codec->codec_id), nullptr);
+        if (ret != 0)
         {
 //            ATLTRACE("Could not open audio codec.（无法打开解码器）\n");
-            return false;
+            return -1;
         }
     }
 
-    return true;
+    return 0;
 }
 
-bool  AVInputStream::StartCapture()
+void AVInputStream::Close()
+{
+    exit_thread_ = true;
+
+    if (capture_video_thread_ != nullptr)
+    {
+        capture_video_thread_->join();
+    }
+
+    if (capture_audio_thread_ != nullptr)
+    {
+        capture_audio_thread_->join();
+    }
+
+    if (capture_video_thread_ != nullptr)
+    {
+        delete capture_video_thread_;
+        capture_video_thread_ = nullptr;
+    }
+
+    if (capture_audio_thread_ != nullptr)
+    {
+        delete capture_audio_thread_;
+        capture_audio_thread_ = nullptr;
+    }
+
+    // 关闭输入流
+    if (video_fmt_ctx_ != nullptr)
+    {
+        avformat_close_input(&video_fmt_ctx_);
+    }
+
+    if (audio_fmt_ctx_ != nullptr)
+    {
+        avformat_close_input(&audio_fmt_ctx_);
+    }
+
+    if (video_fmt_ctx_ != nullptr)
+    {
+        avformat_free_context(video_fmt_ctx_);
+    }
+
+    if (audio_fmt_ctx_ != nullptr)
+    {
+        avformat_free_context(audio_fmt_ctx_);
+    }
+
+    video_fmt_ctx_ = nullptr;
+    video_index_ = -1;
+    audio_fmt_ctx_ = nullptr;
+    audio_index_ = -1;
+    input_fmt_ = nullptr;
+}
+
+int AVInputStream::StartCapture()
 {
     // StartCapture函数分别建立了一个读取视频包和读取音频包的线程，两个线程各自独立工作，分别从视频采集设备，音频采集设备获取到数据，然后进行后续的处理。
-    if (m_videoindex == -1 && m_audioindex == -1)
+    if (-1 == video_index_ && -1 == audio_index_)
     {
 //        ATLTRACE("错误：你没有打开设备 \n");
-        return false;
+        return -1;
     }
 
-    m_start_time = av_gettime();
+    start_time_ = av_gettime();
+    exit_thread_ = false;
 
-    m_exit_thread = false;
-
-    if (!m_video_device.empty())
+    if (!video_device_.empty())
     {
-        m_hCapVideoThread = new std::thread(CaptureVideoThreadFunc, this);
+        capture_video_thread_ = new std::thread(CaptureVideoThreadFunc, this);
     }
 
-    if (!m_audio_device.empty())
+    if (!audio_device_.empty())
     {
-        m_hCapAudioThread = new std::thread(CaptureAudioThreadFunc, this);
+        capture_audio_thread_ = new std::thread(CaptureAudioThreadFunc, this);
     }
 
-    return true;
+    return 0;
 }
 
-void  AVInputStream::CloseInputStream()
+int AVInputStream::GetVideoInputInfo(int& width, int& height, int& frame_rate, AVPixelFormat& pix_fmt)
 {
-    m_exit_thread = true;
-
-    // 通知线程退出
-//    if (m_hCapVideoThread)
-//    {
-//        if ( WAIT_TIMEOUT == WaitForSingleObject(m_hCapVideoThread, 3000) )
-//        {
-//            OutputDebugString("WaitForSingleObject timeout.\n");
-//            //::TerminateThread(m_hCapVideoThread, 0);
-//        }
-//        CloseHandle(m_hCapVideoThread);
-//        m_hCapVideoThread = NULL;
-//    }
-
-//    if (m_hCapAudioThread)
-//    {
-//        if ( WAIT_TIMEOUT == WaitForSingleObject(m_hCapAudioThread, 3000) )
-//        {
-//            OutputDebugString("WaitForSingleObject timeout.\n");
-//            //::TerminateThread(m_hCapAudioThread, 0);
-//        }
-//        CloseHandle(m_hCapAudioThread);
-//        m_hCapAudioThread = NULL;
-//    }
-
-    //关闭输入流
-    if (m_pVidFmtCtx != NULL)
+    if (-1 == video_index_)
     {
-        avformat_close_input(&m_pVidFmtCtx);
-        //m_pVidFmtCtx = NULL;
-    }
-    if (m_pAudFmtCtx != NULL)
-    {
-        avformat_close_input(&m_pAudFmtCtx);
-        //m_pAudFmtCtx = NULL;
+        return -1;
     }
 
-    if (m_pVidFmtCtx)
+    width = video_fmt_ctx_->streams[video_index_]->codec->width;
+    height = video_fmt_ctx_->streams[video_index_]->codec->height;
+
+    AVStream* stream = video_fmt_ctx_->streams[video_index_];
+    pix_fmt = stream->codec->pix_fmt;
+
+    //frame_rate = stream->avg_frame_rate.num/stream->avg_frame_rate.den;//每秒多少帧
+
+    if (stream->r_frame_rate.den > 0)
     {
-        avformat_free_context(m_pVidFmtCtx);
+        frame_rate = stream->r_frame_rate.num / stream->r_frame_rate.den;
     }
-    if (m_pAudFmtCtx)
+    else if (stream->codec->framerate.den > 0)
     {
-        avformat_free_context(m_pAudFmtCtx);
+        frame_rate = stream->codec->framerate.num / stream->codec->framerate.den;
     }
 
-    m_pVidFmtCtx = NULL;
-    m_pAudFmtCtx = NULL;
-    m_pInputFormat = NULL;
-
-    m_videoindex = -1;
-    m_audioindex = -1;
+    qDebug() << width << height << frame_rate << pix_fmt;
+    return 0;
 }
 
-int  AVInputStream::ReadVideoPackets()
+int AVInputStream::GetAudioInputInfo(AVSampleFormat& sample_fmt, int& sample_rate, int& channels)
 {
-    if (dec_pkt == NULL)
+    if (-1 == audio_index_)
     {
-        ////prepare before decode and encode
-        dec_pkt = (AVPacket*)av_malloc(sizeof(AVPacket));
+        return -1;
     }
 
-    int encode_video = 1;
-    int ret;
+    sample_fmt = audio_fmt_ctx_->streams[audio_index_]->codec->sample_fmt;
+    sample_rate = audio_fmt_ctx_->streams[audio_index_]->codec->sample_rate;
+    channels = audio_fmt_ctx_->streams[audio_index_]->codec->channels;
 
-//    不停地调用 av_read_frame读取采集到的图像帧，接着调用avcodec_decode_video2进行“解码”，这样获得了原始的图像，图像可能是RGB或YUV格式。解码后的图像通过m_pVideoCBFunc指向的回调函数回调给上层处理，回调函数里可进行后续的一些操作，比如对视频帧编码或直接显示。
-    //start decode and encode
+    qDebug() << sample_fmt << sample_rate << channels;
+    return 0;
+}
 
-    while (encode_video)
+int AVInputStream::ReadVideoPackets()
+{
+    // 不停地调用 av_read_frame读取采集到的图像帧，接着调用avcodec_decode_video2进行“解码”，这样获得了原始的图像，图像可能是RGB或YUV格式。
+    // 解码后的图像通过m_pVideoCBFunc指向的回调函数回调给上层处理，回调函数里可进行后续的一些操作，比如对视频帧编码或直接显示。
+    while (true)
     {
-        if (m_exit_thread)
+//        if (exit_thread_)
+//        {
+//            break;
+//        }
+
+        AVPacket pkt;
+        av_init_packet(&pkt);
+        pkt.data = nullptr;
+        pkt.size = 0;
+
+        int ret = av_read_frame(video_fmt_ctx_, &pkt);
+        if (ret != 0)
         {
+            qDebug() << "av_read_frame failed";
             break;
         }
 
-        AVFrame* pframe = NULL;
-        if ((ret = av_read_frame(m_pVidFmtCtx, dec_pkt)) >= 0)
+        ret = avcodec_send_packet(video_fmt_ctx_->streams[pkt.stream_index]->codec, &pkt);
+        if (ret != 0)
         {
-            pframe = av_frame_alloc();
-            if (!pframe)
-            {
-                ret = AVERROR(ENOMEM);
-                return ret;
-            }
-            int dec_got_frame = 0;
-            ret = avcodec_decode_video2(m_pVidFmtCtx->streams[dec_pkt->stream_index]->codec, pframe, &dec_got_frame, dec_pkt);
-            if (ret < 0)
-            {
-                av_frame_free(&pframe);
-                av_log(NULL, AV_LOG_ERROR, "Decoding failed\n");
-                break;
-            }
-            if (dec_got_frame)
-            {
-                if (m_pVideoCBFunc)
-                {
-                    QMutexLocker lock(&m_WriteLock);
+            qDebug() << "avcodec_send_packet failed";
+            break;
+        }
 
-                    m_pVideoCBFunc(m_pVidFmtCtx->streams[dec_pkt->stream_index], m_pVidFmtCtx->streams[m_videoindex]->codec->pix_fmt, pframe, av_gettime() - m_start_time);
-                }
+        AVFrame* frame = av_frame_alloc();
+        if (nullptr == frame)
+        {
+            qDebug() << "av_frame_alloc failed";
+            break;
+        }
 
-                av_frame_free(&pframe);
-            }
-            else
+        ret = avcodec_receive_frame(video_fmt_ctx_->streams[pkt.stream_index]->codec, frame);
+        if (0 == ret)
+        {
+            if (video_cb_ != nullptr)
             {
-                av_frame_free(&pframe);
+                QMutexLocker lock(&write_file_mutex_);
+                video_cb_(video_fmt_ctx_->streams[pkt.stream_index],
+                          video_fmt_ctx_->streams[video_index_]->codec->pix_fmt, frame,
+                          av_gettime() - start_time_);
             }
-
-            av_free_packet(dec_pkt);
         }
         else
         {
-            if (ret == AVERROR_EOF)
-            {
-                encode_video = 0;
-            }
-            else
-            {
-//                ATLTRACE("Could not read video frame\n");
-                break;
-            }
+            qDebug() << "avcodec_receive_frame failed";
         }
+
+        av_frame_free(&frame);
     }
 
     return 0;
@@ -381,139 +357,71 @@ int  AVInputStream::ReadVideoPackets()
 
 int AVInputStream::ReadAudioPackets()
 {
-    //audio trancoding here
-    int ret;
-
-    int encode_audio = 1;
-    int dec_got_frame_a = 0;
-
-    //start decode and encode
-    while (encode_audio)
+    while (true)
     {
-        if (m_exit_thread)
+//        if (exit_thread_)
+//        {
+//            break;
+//        }
+
+        AVPacket pkt;
+        av_init_packet(&pkt);
+        pkt.data = nullptr;
+        pkt.size = 0;
+
+        /** Read one audio frame from the input file into a temporary packet. */
+        int ret = av_read_frame(audio_fmt_ctx_, &pkt);
+        if (ret != 0)
         {
+            qDebug() << "av_read_frame failed";
             break;
         }
 
-        /**
-        * Decode one frame worth of audio samples, convert it to the
-        * output sample format and put it into the FIFO buffer.
-        */
-        AVFrame* input_frame = av_frame_alloc();
-        if (!input_frame)
+        ret = avcodec_send_packet(audio_fmt_ctx_->streams[pkt.stream_index]->codec, &pkt);
+        if (ret != 0)
         {
-            ret = AVERROR(ENOMEM);
-            return ret;
+            qDebug() << "avcodec_send_packet failed";
+            break;
         }
 
-        /** Decode one frame worth of audio samples. */
-        /** Packet used for temporary storage. */
-        AVPacket input_packet;
-        av_init_packet(&input_packet);
-        input_packet.data = NULL;
-        input_packet.size = 0;
-
-        /** Read one audio frame from the input file into a temporary packet. */
-        if ((ret = av_read_frame(m_pAudFmtCtx, &input_packet)) < 0)
+        AVFrame* frame = av_frame_alloc();
+        if (nullptr == frame)
         {
-            /** If we are at the end of the file, flush the decoder below. */
-            if (ret == AVERROR_EOF)
+            qDebug() << "av_frame_alloc failed";
+            break;
+        }
+
+        ret = avcodec_receive_frame(audio_fmt_ctx_->streams[pkt.stream_index]->codec, frame);
+        if (0 == ret)
+        {
+            if (audio_cb_ != nullptr)
             {
-                encode_audio = 0;
-            }
-            else
-            {
-//                ATLTRACE("Could not read audio frame\n");
-                return ret;
+                QMutexLocker lock(&write_file_mutex_);
+                audio_cb_(audio_fmt_ctx_->streams[pkt.stream_index], frame, av_gettime() - start_time_);
             }
         }
-
-        /**
-        * Decode the audio frame stored in the temporary packet.
-        * The input audio stream decoder is used to do this.
-        * If we are at the end of the file, pass an empty packet to the decoder
-        * to flush it.
-        */
-        if ((ret = avcodec_decode_audio4(m_pAudFmtCtx->streams[m_audioindex]->codec, input_frame, &dec_got_frame_a, &input_packet)) < 0)
+        else
         {
-//            ATLTRACE("Could not decode audio frame\n");
-            return ret;
-        }
-        av_packet_unref(&input_packet);
-        /** If there is decoded data, convert and store it */
-        if (dec_got_frame_a)
-        {
-            if (m_pAudioCBFunc)
-            {
-                QMutexLocker lock(&m_WriteLock);
+            qDebug() << "avcodec_receive_frame failed";
 
-                m_pAudioCBFunc(m_pAudFmtCtx->streams[m_audioindex], input_frame, av_gettime() - m_start_time);
-            }
         }
 
-        av_frame_free(&input_frame);
-
-
-    }//while
+        av_frame_free(&frame);
+    }
 
     return 0;
 }
 
-
-bool AVInputStream::GetVideoInputInfo(int& width, int& height, int& frame_rate, AVPixelFormat& pixFmt)
-{
-    if (m_videoindex != -1)
-    {
-        width  =  m_pVidFmtCtx->streams[m_videoindex]->codec->width;
-        height =  m_pVidFmtCtx->streams[m_videoindex]->codec->height;
-
-        AVStream* stream = m_pVidFmtCtx->streams[m_videoindex];
-
-        pixFmt = stream->codec->pix_fmt;
-
-        //frame_rate = stream->avg_frame_rate.num/stream->avg_frame_rate.den;//每秒多少帧
-
-        if (stream->r_frame_rate.den > 0)
-        {
-            frame_rate = stream->r_frame_rate.num / stream->r_frame_rate.den;
-        }
-        else if (stream->codec->framerate.den > 0)
-        {
-            frame_rate = stream->codec->framerate.num / stream->codec->framerate.den;
-        }
-
-        return true;
-    }
-    return false;
-}
-
-bool  AVInputStream::GetAudioInputInfo(AVSampleFormat& sample_fmt, int& sample_rate, int& channels)
-{
-    if (m_audioindex != -1)
-    {
-        sample_fmt = m_pAudFmtCtx->streams[m_audioindex]->codec->sample_fmt;
-        sample_rate = m_pAudFmtCtx->streams[m_audioindex]->codec->sample_rate;
-        channels = m_pAudFmtCtx->streams[m_audioindex]->codec->channels;
-
-        return true;
-    }
-    return false;
-}
-
 int AVInputStream::CaptureVideoThreadFunc(void* args)
 {
-    AVInputStream* pThis = (AVInputStream*)args;
-
-    pThis->ReadVideoPackets();
-
+    AVInputStream* input_stream = static_cast<AVInputStream*>(args);
+    input_stream->ReadVideoPackets();
     return 0;
 }
 
 int AVInputStream::CaptureAudioThreadFunc(void* args)
 {
-    AVInputStream* pThis = (AVInputStream*)args;
-
-    pThis->ReadAudioPackets();
-
+    AVInputStream* input_stream = static_cast<AVInputStream*>(args);
+    input_stream->ReadAudioPackets();
     return 0;
 }

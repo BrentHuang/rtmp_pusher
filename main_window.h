@@ -18,24 +18,23 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
-private slots:
-
-    void on_actionDevices_triggered();
+public slots:
     void OnStartStream();
     void OnStopStream();
 
-private:
-    int ShowDevices();
+private slots:
+    void on_actionDevices_triggered();
 
 public:
-    AVInputStream    m_InputStream;
-    AVOutputStream   m_OutputStream;
+    AVInputStream input_stream_;
+    AVOutputStream output_stream_;
 
 private:
     Ui::MainWindow* ui;
-    std::string m_video_device;
-    std::string m_audio_device;
-    std::string m_szFilePath;
+
+    std::string video_input_device_;
+    std::string audio_input_device_;
+    std::string record_file_path_;
     int64_t              m_frmCount;
     int64_t              m_nFPS;
 };

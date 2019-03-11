@@ -1,8 +1,5 @@
 ﻿#include "main_window.h"
 #include <QDebug>
-#include <QSysInfo>
-#include <QOperatingSystemVersion>
-#include "ui_main_window.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,8 +11,10 @@ extern "C" {
 #endif
 
 #include <chrono>
-#include "ds_av_devices.h"
-#include "mf_av_devices.h"
+#include "ui_main_window.h"
+#include "devices_dialog.h"
+#include "signal_center.h"
+#include "global.h"
 
 MainWindow*           gpMainFrame = NULL;
 
@@ -76,24 +75,18 @@ static int VideoCaptureCallback(AVStream* input_st, AVPixelFormat pix_fmt, AVFra
 //        gpMainFrame->m_Painter.Play(input_st, pframe);
 //    }
 
-    gpMainFrame->m_OutputStream.write_video_frame(input_st, pix_fmt, pframe, lTimeStamp);
+    gpMainFrame->output_stream_.write_video_frame(input_st, pix_fmt, pframe, lTimeStamp);
     return 0;
 }
 
 //采集到的音频数据回调
 static int AudioCaptureCallback(AVStream* input_st, AVFrame* pframe, int64_t lTimeStamp)
 {
-    gpMainFrame->m_OutputStream.write_audio_frame(input_st, pframe, lTimeStamp);
+    gpMainFrame->output_stream_.write_audio_frame(input_st, pframe, lTimeStamp);
     return 0;
 }
 
 int64_t  StartTime = 0;
-
-// A pointer to an arbitrary struct of which the first field is a pointer to an AVClass struct.
-void av_log_callback(void* avcl, int level, const char* fmt, va_list vl)
-{
-
-}
 
 MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent),
@@ -102,96 +95,41 @@ MainWindow::MainWindow(QWidget* parent) :
     ui->setupUi(this);
     gpMainFrame = this;
 
-    av_log_set_level(AV_LOG_WARNING);
-//    av_log_set_callback(av_log_callback);
-
-    avdevice_register_all();
     show_dshow_device();
+
+    connect(SIGNAL_CENTER, &SignalCenter::StartStream, this, &MainWindow::OnStartStream);
+    connect(SIGNAL_CENTER, &SignalCenter::StopStream, this, &MainWindow::OnStopStream);
 }
 
 MainWindow::~MainWindow()
 {
+    disconnect(SIGNAL_CENTER, &SignalCenter::StartStream, this, &MainWindow::OnStartStream);
+
     OnStopStream();
     delete ui;
 }
 
 void MainWindow::on_actionDevices_triggered()
 {
-#if defined(Q_OS_WIN)
-    std::vector<DeviceCtx> video_devices;
-    std::vector<DeviceCtx> audio_devices;
-
-    if (QOperatingSystemVersion::current() >= QOperatingSystemVersion::Windows10)
-    {
-        if (MFGetAVInputDevices(video_devices, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID) != 0)
-        {
-            qDebug() << "failed";
-            return;
-        }
-
-        if (MFGetAVInputDevices(audio_devices, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_AUDCAP_GUID) != 0)
-        {
-            qDebug() << "failed";
-            return;
-        }
-    }
-    else
-    {
-        if (DSGetAVInputDevices(video_devices, CLSID_VideoInputDeviceCategory) != 0)
-        {
-            qDebug() << "failed";
-            return;
-        }
-
-        if (DSGetAVInputDevices(audio_devices, CLSID_AudioInputDeviceCategory) != 0)
-        {
-            qDebug() << "failed";
-            return;
-        }
-    }
-
-    qDebug() << "video devices:";
-    for (int i = 0; i < (int) video_devices.size(); ++i)
-    {
-        qDebug() << i << QString::fromWCharArray(video_devices[i].FriendlyName)
-                 << QString::fromWCharArray(video_devices[i].MonikerName);
-    }
-
-    qDebug() << "audio devices:";
-    for (int i = 0; i < (int) audio_devices.size(); ++i)
-    {
-        qDebug() << i << QString::fromWCharArray(audio_devices[i].FriendlyName)
-                 << QString::fromWCharArray(audio_devices[i].MonikerName);
-    }
-
-// 开始采集
-    m_InputStream.SetVideoCaptureDevice(QString::fromWCharArray(video_devices[0].FriendlyName).toStdString());
-    m_InputStream.SetAudioCaptureDevice(QString::fromWCharArray(audio_devices[0].FriendlyName).toStdString());
-#elif defined(Q_OS_LINUX)
-//    m_InputStream.SetVideoCaptureDevice(QString::fromWCharArray(video_devices[0].FriendlyName).toStdString());
-//    m_InputStream.SetAudioCaptureDevice(QString::fromWCharArray(audio_devices[0].FriendlyName).toStdString());
-#endif
-
-    OnStartStream();
-
-// 停止采集
-//    OnStopStream();
-
-
+    DevicesDialog devices_dialog;
+    devices_dialog.exec(); // show(): 非模态  open(): 半模态  exec(): 模态
 }
 
 void MainWindow::OnStartStream()
 {
-    // 首先设置了视频和音频的数据回调函数。当采集开始时，视频和音频数据就会传递给相应的函数去处理，在该程序中，回调函数主要对图像或音频进行编码，然后封装成FFmpeg支持的容器（例如mkv/avi/mpg/ts/mp4）
-    m_InputStream.SetVideoCaptureCB(VideoCaptureCallback);
-    m_InputStream.SetAudioCaptureCB(AudioCaptureCallback);
+    input_stream_.SetVideoCaptureDevice(GLOBAL->config.GetVideoCaptureDevice());
+    input_stream_.SetAudioCaptureDevice(GLOBAL->config.GetAudioCaptureDevice());
 
-    // 打开输入设备
-    bool bRet;
-    bRet = m_InputStream.OpenInputStream(); //初始化采集设备
-    if (!bRet)
+    // 设置视频和音频的数据回调函数。当采集开始时，视频和音频数据就会传递给相应的函数去处理，
+    // 在该程序中，回调函数主要对图像或音频进行编码，然后封装成FFmpeg支持的容器（例如mkv/avi/mpg/ts/mp4）
+    input_stream_.SetVideoCaptureCB(VideoCaptureCallback);
+    input_stream_.SetAudioCaptureCB(AudioCaptureCallback);
+
+    // 初始化采集设备
+    if (input_stream_.Open() != 0)
     {
 //        MessageBox(_T("打开采集设备失败"), _T("提示"), MB_OK | MB_ICONWARNING);
+        input_stream_.Close();
         return;
     }
 
@@ -199,21 +137,21 @@ void MainWindow::OnStartStream()
     // 初始化输出流需要知道视频采集的分辨率，帧率，输出像素格式等信息，还有音频采集设备的采样率，声道数，Sample格式，而这些信息可通过CAVInputStream类的接口来获取到
     int cx, cy, fps;
     AVPixelFormat pixel_fmt;
-    if (m_InputStream.GetVideoInputInfo(cx, cy, fps, pixel_fmt)) //获取视频采集源的信息
+    if (0 == input_stream_.GetVideoInputInfo(cx, cy, fps, pixel_fmt)) //获取视频采集源的信息
     {
-        m_OutputStream.SetVideoCodecProp(AV_CODEC_ID_H264, fps, 500000, 100, cx, cy); //设置视频编码器属性
+        output_stream_.SetVideoCodecProp(AV_CODEC_ID_H264, fps, 500000, 100, cx, cy); //设置视频编码器属性
     }
 
     int sample_rate = 0, channels = 0;
     AVSampleFormat  sample_fmt;
-    if (m_InputStream.GetAudioInputInfo(sample_fmt, sample_rate, channels)) //获取音频采集源的信息
+    if (0 == input_stream_.GetAudioInputInfo(sample_fmt, sample_rate, channels)) //获取音频采集源的信息
     {
-        m_OutputStream.SetAudioCodecProp(AV_CODEC_ID_AAC, sample_rate, channels, 32000); //设置音频编码器属性
+        output_stream_.SetAudioCodecProp(AV_CODEC_ID_AAC, sample_rate, channels, 32000); //设置音频编码器属性
     }
 
     // 打开编码器和录制的容器
-    m_szFilePath = "D:\\mycamera.mkv";
-    bRet  = m_OutputStream.OpenOutputStream(m_szFilePath.c_str()); //设置输出路径
+    record_file_path_ = "D:\\mycamera.mkv";
+    bool bRet  = output_stream_.OpenOutputStream(record_file_path_.c_str()); //设置输出路径
     if (!bRet)
     {
 //        MessageBox(_T("初始化输出失败"), _T("提示"), MB_OK | MB_ICONWARNING);
@@ -226,78 +164,25 @@ void MainWindow::OnStartStream()
 //    m_Painter.Open();
 
     // 开始采集
-    bRet = m_InputStream.StartCapture();
+    input_stream_.StartCapture();
 
     StartTime = TimeNowMSec();
 
     m_frmCount = 0;
     m_nFPS = 0;
+
+    GLOBAL->config.SetStarted(true);
 }
 
 void MainWindow::OnStopStream()
 {
-    m_InputStream.CloseInputStream();
-    m_OutputStream.CloseOutput();
+    input_stream_.Close();
+    output_stream_.CloseOutput();
 //    m_Painter.Close();
 
 //    TRACE("采集用时：%d 秒\n", (timeGetTime() - StartTime) / 1000);
 
     StartTime = 0;
-}
 
-int MainWindow::ShowDevices()
-{
-    //    ::CoInitialize(NULL); //调用DirectShow SDK的API需要用到COM库
-
-
-    //    int iVideoCapDevNum = 0;
-    //    int iAudioCapDevNum = 0;
-
-    //    char* DevicesArray[20];
-    //    for (int i = 0; i < 20; i++)
-    //    {
-    //        DevicesArray[i] = new char[256];
-    //        memset(DevicesArray[i], 0, 256);
-    //    }
-
-    //    HRESULT hr;
-    //    hr = EnumDevice(DSHOW_VIDEO_DEVICE, DevicesArray, sizeof(DevicesArray) / sizeof(DevicesArray[0]), iVideoCapDevNum);
-    //    if (hr == S_OK)
-    //    {
-    //        for (int i = 0; i < iVideoCapDevNum; i++)
-    //        {
-    //            CString strDevName = DevicesArray[i];
-    //            ((CComboBox*)GetDlgItem(IDC_COMBO_VIDEO_DEVICES))->AddString(strDevName);
-    //        }
-    //    }
-
-    //    hr = EnumDevice(DSHOW_AUDIO_DEVICE, DevicesArray, sizeof(DevicesArray) / sizeof(DevicesArray[0]), iAudioCapDevNum);
-    //    if (hr == S_OK)
-    //    {
-    //        for (int i = 0; i < iAudioCapDevNum; i++)
-    //        {
-    //            CString strDevName = DevicesArray[i];
-    //            ((CComboBox*)GetDlgItem(IDC_COMBO_AUDIO_DEVICES))->AddString(strDevName);
-    //        }
-    //    }
-
-    //    for (int i = 0; i < 20; i++)
-    //    {
-    //        delete DevicesArray[i];
-    //        DevicesArray[i] = NULL;
-    //    }
-
-    //    if (iVideoCapDevNum > 0)
-    //    {
-    //        ((CButton*)GetDlgItem(IDC_CHECK_ENABLE_VIDEODEV))->SetCheck(TRUE);
-    //    }
-
-    //    if (iAudioCapDevNum > 0)
-    //    {
-    //        ((CButton*)GetDlgItem(IDC_CHECK_ENABLE_AUDIODEV))->SetCheck(TRUE);
-    //    }
-
-    //    CoUninitialize();
-
-    return 0;
+    GLOBAL->config.SetStarted(false);
 }

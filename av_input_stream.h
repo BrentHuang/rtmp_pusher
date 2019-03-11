@@ -13,29 +13,29 @@ extern "C" {
 }
 #endif
 
-typedef int (*VideoCaptureCB)(AVStream* input_st, AVPixelFormat pix_fmt, AVFrame* pframe, int64_t lTimeStamp);
-typedef int (*AudioCaptureCB)(AVStream* input_st, AVFrame* pframe, int64_t lTimeStamp);
+typedef int (*VideoCaptureCB)(AVStream* input_st, AVPixelFormat pix_fmt, AVFrame* frame, int64_t timestamp);
+typedef int (*AudioCaptureCB)(AVStream* input_st, AVFrame* frame, int64_t timestamp);
 
 class AVInputStream
 {
 public:
-    AVInputStream(void);
-    ~AVInputStream(void);
+    AVInputStream();
+    ~AVInputStream();
 
 public:
-    void  SetVideoCaptureDevice(std::string device_name);
-    void  SetAudioCaptureDevice(std::string device_name);
+    void SetVideoCaptureDevice(const std::string& device_name);
+    void SetAudioCaptureDevice(const std::string& device_name);
 
-    bool  OpenInputStream();
-    void  CloseInputStream();
+    void SetVideoCaptureCB(VideoCaptureCB cb);
+    void SetAudioCaptureCB(AudioCaptureCB cb);
 
-    bool  StartCapture();
+    int Open();
+    void Close();
 
-    void  SetVideoCaptureCB(VideoCaptureCB pFuncCB);
-    void  SetAudioCaptureCB(AudioCaptureCB pFuncCB);
+    int StartCapture();
 
-    bool  GetVideoInputInfo(int& width, int& height, int& framerate, AVPixelFormat& pixFmt);
-    bool  GetAudioInputInfo(AVSampleFormat& sample_fmt, int& sample_rate, int& channels);
+    int GetVideoInputInfo(int& width, int& height, int& frame_rate, AVPixelFormat& pix_fmt);
+    int GetAudioInputInfo(AVSampleFormat& sample_fmt, int& sample_rate, int& channels);
 
 protected:
     static int CaptureVideoThreadFunc(void* args);
@@ -45,28 +45,26 @@ protected:
     int  ReadAudioPackets();
 
 protected:
-    std::string  m_video_device;
-    std::string  m_audio_device;
+    std::string video_device_;
+    std::string audio_device_;
 
-    int     m_videoindex;
-    int     m_audioindex;
+    VideoCaptureCB video_cb_;
+    AudioCaptureCB audio_cb_;
 
-    AVFormatContext* m_pVidFmtCtx;
-    AVFormatContext* m_pAudFmtCtx;
-    AVInputFormat*  m_pInputFormat;
+    AVInputFormat* input_fmt_;
 
-    AVPacket* dec_pkt;
+    AVFormatContext* video_fmt_ctx_;
+    int video_index_;
 
-    std::thread* m_hCapVideoThread;
-    std::thread* m_hCapAudioThread; //线程句柄
-    bool   m_exit_thread; //退出线程的标志变量
+    AVFormatContext* audio_fmt_ctx_;
+    int audio_index_;
 
-    VideoCaptureCB  m_pVideoCBFunc; //视频数据回调函数指针
-    AudioCaptureCB  m_pAudioCBFunc; //音频数据回调函数指针
+    int64_t start_time_; // 采集的起点时间，单位：毫秒
+    std::thread* capture_video_thread_;
+    std::thread* capture_audio_thread_;
+    std::atomic_bool exit_thread_;
 
-    QMutex     m_WriteLock;
-
-    int64_t     m_start_time; //采集的起点时间
+    QMutex write_file_mutex_;
 };
 
 #endif // AV_INPUT_STREAM_H
