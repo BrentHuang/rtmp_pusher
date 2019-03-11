@@ -13,8 +13,8 @@ extern "C" {
 #endif
 
 #include <chrono>
-#include "DS_AudioVideoDevices.h"
-#include "MF_AudioVideoDevices.h"
+#include "ds_av_devices.h"
+#include "mf_av_devices.h"
 
 MainWindow*           gpMainFrame = NULL;
 
@@ -88,12 +88,21 @@ static int AudioCaptureCallback(AVStream* input_st, AVFrame* pframe, int64_t lTi
 
 int64_t  StartTime = 0;
 
+// A pointer to an arbitrary struct of which the first field is a pointer to an AVClass struct.
+void av_log_callback(void* avcl, int level, const char* fmt, va_list vl)
+{
+
+}
+
 MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
     gpMainFrame = this;
+
+    av_log_set_level(AV_LOG_WARNING);
+//    av_log_set_callback(av_log_callback);
 
     avdevice_register_all();
     show_dshow_device();
@@ -107,6 +116,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_actionDevices_triggered()
 {
+#if defined(Q_OS_WIN)
     std::vector<TDeviceName> video_devices;
     std::vector<TDeviceName> audio_devices;
     HRESULT hr;
@@ -160,8 +170,12 @@ void MainWindow::on_actionDevices_triggered()
     }
 
 // 开始采集
-    m_InputStream.SetVideoCaptureDevice(QString::fromWCharArray(video_devices[1].FriendlyName).toStdString());
+    m_InputStream.SetVideoCaptureDevice(QString::fromWCharArray(video_devices[0].FriendlyName).toStdString());
     m_InputStream.SetAudioCaptureDevice(QString::fromWCharArray(audio_devices[0].FriendlyName).toStdString());
+#elif defined(Q_OS_LINUX)
+//    m_InputStream.SetVideoCaptureDevice(QString::fromWCharArray(video_devices[0].FriendlyName).toStdString());
+//    m_InputStream.SetAudioCaptureDevice(QString::fromWCharArray(audio_devices[0].FriendlyName).toStdString());
+#endif
 
     OnStartStream();
 

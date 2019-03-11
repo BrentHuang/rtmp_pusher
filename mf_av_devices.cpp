@@ -1,4 +1,6 @@
-﻿#include "MF_AudioVideoDevices.h"
+﻿#include "mf_av_devices.h"
+
+#if defined(Q_OS_WIN)
 #include <mfapi.h>
 
 #pragma comment(lib, "Mfplat.lib")
@@ -67,3 +69,4 @@ HRESULT MF_GetAudioVideoInputDevices( std::vector<TDeviceName>& vectorDevices, R
 
     return hr;
 }
+#endif

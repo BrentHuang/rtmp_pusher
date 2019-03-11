@@ -29,7 +29,7 @@ QMAKE_CXXFLAGS_RELEASE = $$QMAKE_CFLAGS_RELEASE_WITH_DEBUGINFO
 QMAKE_LFLAGS_RELEASE = $$QMAKE_LFLAGS_RELEASE_WITH_DEBUGINFO
 
 win32 {
-    THIRD_PARTY_INSTALL_PREFIX = D:
+    THIRD_PARTY_INSTALL_PREFIX = D:/third_party
 
     INCLUDEPATH += $${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/include
     LIBS += -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavcodec \
@@ -69,15 +69,15 @@ SOURCES += \
         main_window.cpp \
     av_input_stream.cpp \
     av_output_stream.cpp \
-    DS_AudioVideoDevices.cpp \
-    MF_AudioVideoDevices.cpp
+    mf_av_devices.cpp \
+    ds_av_devices.cpp
 
 HEADERS += \
         main_window.h \
     av_input_stream.h \
     av_output_stream.h \
-    DS_AudioVideoDevices.h \
-    MF_AudioVideoDevices.h
+    mf_av_devices.h \
+    ds_av_devices.h
 
 FORMS += \
         main_window.ui

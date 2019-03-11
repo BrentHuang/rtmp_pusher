@@ -1,5 +1,6 @@
-﻿#include "DS_AudioVideoDevices.h"
+﻿#include "ds_av_devices.h"
 
+#if defined(Q_OS_WIN)
 #pragma comment(lib, "Strmiids.lib")
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "oleaut32.lib")
@@ -81,4 +82,4 @@ HRESULT DS_GetAudioVideoInputDevices( std::vector<TDeviceName>& vectorDevices, R
 
     return hr;
 }
-
+#endif

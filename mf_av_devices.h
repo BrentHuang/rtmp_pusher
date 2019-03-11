@@ -1,22 +1,9 @@
-﻿/* ----------------------------------------------------------
-文件名称：MF_AudioVideoDevices.h
+﻿#ifndef MF_AV_DEVICES_H
+#define MF_AV_DEVICES_H
 
-作者：秦建辉
+#include <qsystemdetection.h>
 
-MSN：splashcn@msn.com
-
-版本历史：
-    V1.0    2010年10月09日
-            完成正式版本。
-
-功能描述：
-    获取音频视频输入设备列表
-
-接口函数：
-    MF_GetAudioVideoInputDevices
- ------------------------------------------------------------ */
-#pragma once
-
+#if defined(Q_OS_WIN)
 #include <vector>
 #include <windows.h>
 #include <mfidl.h>
@@ -59,3 +46,6 @@ HRESULT MF_GetAudioVideoInputDevices( std::vector<TDeviceName>& vectorDevices, R
 #ifdef __cplusplus
 }
 #endif
+
+#endif
+#endif // MF_AV_DEVICES_H
