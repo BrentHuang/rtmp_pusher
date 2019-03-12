@@ -13,8 +13,8 @@ extern "C" {
 }
 #endif
 
-typedef int (*VideoCaptureCB)(AVStream* input_st, AVPixelFormat pix_fmt, AVFrame* frame, int64_t timestamp);
-typedef int (*AudioCaptureCB)(AVStream* input_st, AVFrame* frame, int64_t timestamp);
+typedef int (*VideoCaptureCB)(AVStream* input_stream, AVPixelFormat input_pix_fmt, AVFrame* input_frame, int64_t timestamp);
+typedef int (*AudioCaptureCB)(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp);
 
 class AVInputStream
 {
@@ -34,15 +34,15 @@ public:
 
     int StartCapture();
 
-    int GetVideoInputInfo(int& width, int& height, int& frame_rate, AVPixelFormat& pix_fmt);
-    int GetAudioInputInfo(AVSampleFormat& sample_fmt, int& sample_rate, int& channels);
+    int GetVideoInfo(int& width, int& height, int& frame_rate, AVPixelFormat& pix_fmt);
+    int GetAudioInfo(AVSampleFormat& sample_fmt, int& sample_rate, int& channels);
 
 protected:
     static int CaptureVideoThreadFunc(void* args);
     static int CaptureAudioThreadFunc(void* args);
 
-    int  ReadVideoPackets();
-    int  ReadAudioPackets();
+    int ReadVideoPackets();
+    int ReadAudioPackets();
 
 protected:
     std::string video_device_;

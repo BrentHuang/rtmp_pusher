@@ -31,9 +31,6 @@ public:
 
 private:
     Ui::MainWindow* ui;
-
-    int64_t              m_frmCount;
-    int64_t              m_nFPS;
 };
 
 #endif // MAIN_WINDOW_H
