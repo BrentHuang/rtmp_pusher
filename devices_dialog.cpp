@@ -73,6 +73,10 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
                  << QString::fromWCharArray(audio_device_vec[i].MonikerName);
         ui->comboBox_Audio->addItem(QString::fromWCharArray(audio_device_vec[i].FriendlyName));
     }
+#elif defined(Q_OS_LINUX)
+    ui->comboBox_Audio->addItem(QString::fromStdString("CX20751/2 Analog"));
+    ui->comboBox_Video->addItem(QString::fromStdString("/dev/video0"));
+#endif
 
     if (!last_video_device_.isEmpty())
     {
@@ -102,10 +106,6 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
         ui->pushButton_Start->setEnabled(true);
         ui->pushButton_Stop->setEnabled(false);
     }
-
-#elif defined(Q_OS_LINUX)
-
-#endif
 }
 
 DevicesDialog::~DevicesDialog()

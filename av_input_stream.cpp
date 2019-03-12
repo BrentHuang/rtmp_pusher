@@ -137,7 +137,11 @@ int AVInputStream::Open()
 
     if (!audio_device_.empty())
     {
+#if defined(Q_OS_WIN)
         const std::string device_name = "audio=" + audio_device_;
+#elif defined(Q_OS_LINUX)
+        const std::string device_name = audio_device_;
+#endif
 
         // Set own audio device's name
         int ret = avformat_open_input(&audio_fmt_ctx_, device_name.c_str(), input_fmt_, &opts);
