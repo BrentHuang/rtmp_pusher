@@ -138,7 +138,7 @@ void DevicesDialog::on_pushButton_Dir_clicked()
     QString dir = QFileDialog::getExistingDirectory(this, "请选择文件保存路径");
     if (!dir.isEmpty())
     {
-        GLOBAL->config.SetFilePath(dir.toStdString() + "/my.mkv");
+        GLOBAL->config.SetFilePath(dir.toStdString() + "/my.flv");
         ui->textBrowser_FilePath->setText(QString::fromStdString(GLOBAL->config.GetFilePath()));
     }
 }

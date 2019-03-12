@@ -14,12 +14,17 @@ AVInputStream::AVInputStream() : video_device_(), audio_device_(), write_file_mu
 {
     video_cb_ = nullptr;
     audio_cb_ = nullptr;
+
     input_fmt_ = nullptr;
+
     video_fmt_ctx_ = nullptr;
     video_index_ = -1;
+
     audio_fmt_ctx_ = nullptr;
     audio_index_ = -1;
+
     start_time_ = 0;
+
     capture_video_thread_ = nullptr;
     capture_audio_thread_ = nullptr;
     exit_thread_ = false;
@@ -27,7 +32,6 @@ AVInputStream::AVInputStream() : video_device_(), audio_device_(), write_file_mu
 
 AVInputStream::~AVInputStream()
 {
-    Close();
 }
 
 void AVInputStream::SetVideoCaptureDevice(const std::string& device_name)
@@ -73,18 +77,18 @@ int AVInputStream::Open()
     }
 
     // Set device params
-    AVDictionary* device_param = nullptr;
+    AVDictionary* opts = nullptr;
 
     // if not setting rtbufsize, error messages will be shown in cmd, but you can still watch or record the stream correctly in most time
     // setting rtbufsize will erase those error messages, however, larger rtbufsize will bring latency
-    av_dict_set(&device_param, "rtbufsize", "10M", 0); // TODO
+    av_dict_set(&opts, "rtbufsize", "10M", 0); // TODO
 
     if (!video_device_.empty())
     {
         const std::string device_name = "video=" + video_device_;
 
         // Set own video device's name 打开设备，将设备名称作为参数传进去，注意这个设备名称需要转成UTF-8编码
-        int ret = avformat_open_input(&video_fmt_ctx_, device_name.c_str(), input_fmt_, &device_param);
+        int ret = avformat_open_input(&video_fmt_ctx_, device_name.c_str(), input_fmt_, &opts);
         if (ret != 0)
         {
 //            ATLTRACE("Couldn't open input video stream.（无法打开输入流）\n");
@@ -132,7 +136,7 @@ int AVInputStream::Open()
         const std::string device_name = "audio=" + audio_device_;
 
         // Set own audio device's name
-        int ret = avformat_open_input(&audio_fmt_ctx_, device_name.c_str(), input_fmt_, &device_param);
+        int ret = avformat_open_input(&audio_fmt_ctx_, device_name.c_str(), input_fmt_, &opts);
         if (ret != 0)
         {
 //            ATLTRACE("Couldn't open input audio stream.（无法打开输入流）\n");
@@ -223,8 +227,10 @@ void AVInputStream::Close()
 
     video_fmt_ctx_ = nullptr;
     video_index_ = -1;
+
     audio_fmt_ctx_ = nullptr;
     audio_index_ = -1;
+
     input_fmt_ = nullptr;
     start_time_ = 0;
 }

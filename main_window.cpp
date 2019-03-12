@@ -10,19 +10,12 @@ extern "C" {
 }
 #endif
 
-#include <chrono>
 #include "ui_main_window.h"
 #include "devices_dialog.h"
 #include "signal_center.h"
 #include "global.h"
 
-MainWindow*           gpMainFrame = NULL;
-
-static int64_t TimeNowMSec()
-{
-    return std::chrono::duration_cast<std::chrono::milliseconds>(
-               std::chrono::system_clock::now().time_since_epoch()).count();
-}
+MainWindow*           g_main_frame = NULL;
 
 
 /* 在Windows下可以使用2种方式读取摄像头数据：
@@ -68,32 +61,30 @@ void show_dshow_device()
 }
 
 //采集到的视频图像回调
-static int VideoCaptureCallback(AVStream* input_st, AVPixelFormat pix_fmt, AVFrame* pframe, int64_t lTimeStamp)
+static int VideoCaptureCallback(AVStream* input_stream, AVPixelFormat input_pix_fmt, AVFrame* input_frame, int64_t timestamp)
 {
 //    if (gpMainFrame->IsPreview())
 //    {
 //        gpMainFrame->m_Painter.Play(input_st, pframe);
 //    }
 
-    gpMainFrame->output_stream_.write_video_frame(input_st, pix_fmt, pframe, lTimeStamp);
+    g_main_frame->output_stream_.WriteVideoFrame(input_stream, input_pix_fmt, input_frame, timestamp);
     return 0;
 }
 
 //采集到的音频数据回调
-static int AudioCaptureCallback(AVStream* input_st, AVFrame* pframe, int64_t lTimeStamp)
+static int AudioCaptureCallback(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp)
 {
-    gpMainFrame->output_stream_.write_audio_frame(input_st, pframe, lTimeStamp);
+    g_main_frame->output_stream_.WriteAudioFrame(input_stream, input_frame, timestamp);
     return 0;
 }
-
-int64_t  StartTime = 0;
 
 MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    gpMainFrame = this;
+    g_main_frame = this;
 
     show_dshow_device();
 
@@ -118,8 +109,7 @@ void MainWindow::on_actionDevices_triggered()
 
 void MainWindow::OnStartStream()
 {
-//    input_stream_.SetVideoCaptureDevice(GLOBAL->config.GetVideoCaptureDevice());
-    input_stream_.SetVideoCaptureDevice("/dev/video0");
+    input_stream_.SetVideoCaptureDevice(GLOBAL->config.GetVideoCaptureDevice());
     input_stream_.SetAudioCaptureDevice(GLOBAL->config.GetAudioCaptureDevice());
 
     // 设置视频和音频的数据回调函数。当采集开始时，视频和音频数据就会传递给相应的函数去处理，
@@ -139,23 +129,25 @@ void MainWindow::OnStartStream()
     // 初始化输出流需要知道视频采集的分辨率，帧率，输出像素格式等信息，还有音频采集设备的采样率，声道数，Sample格式，而这些信息可通过CAVInputStream类的接口来获取到
     int cx, cy, fps;
     AVPixelFormat pixel_fmt;
-    if (0 == input_stream_.GetVideoInputInfo(cx, cy, fps, pixel_fmt)) //获取视频采集源的信息
+
+    if (0 == input_stream_.GetVideoInputInfo(cx, cy, fps, pixel_fmt)) // 获取视频采集源的信息
     {
-        output_stream_.SetVideoCodecProp(AV_CODEC_ID_H264, fps, 500000, 100, cx, cy); //设置视频编码器属性
+        output_stream_.SetVideoCodecProp(AV_CODEC_ID_H264, fps, 500000, 100, cx, cy); // 设置视频编码器属性
     }
 
+    AVSampleFormat sample_fmt;
     int sample_rate = 0, channels = 0;
-    AVSampleFormat  sample_fmt;
-    if (0 == input_stream_.GetAudioInputInfo(sample_fmt, sample_rate, channels)) //获取音频采集源的信息
+
+    if (0 == input_stream_.GetAudioInputInfo(sample_fmt, sample_rate, channels)) // 获取音频采集源的信息
     {
-        output_stream_.SetAudioCodecProp(AV_CODEC_ID_AAC, sample_rate, channels, 32000); //设置音频编码器属性
+        output_stream_.SetAudioCodecProp(AV_CODEC_ID_AAC, sample_rate, channels, 32000); // 设置音频编码器属性
     }
 
     // 打开编码器和录制的容器
-    bool bRet  = output_stream_.OpenOutputStream("/home/hgc/a.mkv"); //GLOBAL->config.GetFilePath()); //设置输出路径
-    if (!bRet)
+    if (output_stream_.Open(GLOBAL->config.GetFilePath()) != 0)
     {
 //        MessageBox(_T("初始化输出失败"), _T("提示"), MB_OK | MB_ICONWARNING);
+        output_stream_.Close();
         return;
     }
 
@@ -165,9 +157,10 @@ void MainWindow::OnStartStream()
 //    m_Painter.Open();
 
     // 开始采集
-    input_stream_.StartCapture();
-
-    StartTime = TimeNowMSec();
+    if (input_stream_.StartCapture() != 0)
+    {
+        return;
+    }
 
     m_frmCount = 0;
     m_nFPS = 0;
@@ -178,7 +171,7 @@ void MainWindow::OnStartStream()
 void MainWindow::OnStopStream()
 {
     input_stream_.Close();
-    output_stream_.CloseOutput();
+    output_stream_.Close();
 //    m_Painter.Close();
 
     GLOBAL->config.SetStarted(false);

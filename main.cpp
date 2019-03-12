@@ -12,6 +12,10 @@ extern "C" {
 // avcl: A pointer to an arbitrary struct of which the first field is a pointer to an AVClass struct.
 static void av_log_callback(void* avcl, int level, const char* fmt, va_list vl)
 {
+    (void) avcl;
+    (void) level;
+    (void) fmt;
+    (void) vl;
     // TODO
 }
 
