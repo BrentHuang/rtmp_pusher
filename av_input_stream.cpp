@@ -68,7 +68,7 @@ int AVInputStream::Open()
 #if defined(Q_OS_WIN)
     input_fmt_ = av_find_input_format("dshow");
 #elif defined(Q_OS_LINUX)
-    input_fmt_ = av_find_input_format("v4l2");
+    input_fmt_ = av_find_input_format("video4linux2");
 #endif
 
     if (nullptr == input_fmt_)
@@ -85,7 +85,11 @@ int AVInputStream::Open()
 
     if (!video_device_.empty())
     {
+#if defined(Q_OS_WIN)
         const std::string device_name = "video=" + video_device_;
+#elif defined(Q_OS_LINUX)
+        const std::string device_name = video_device_;
+#endif
 
         // 打开设备
         int ret = avformat_open_input(&video_fmt_ctx_, device_name.c_str(), input_fmt_, &opts);
