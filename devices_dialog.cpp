@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <QOperatingSystemVersion>
 #include <QFileDialog>
+#include <QMessageBox>
 
 #ifdef __cplusplus
 extern "C" {
@@ -83,6 +84,9 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
         ui->comboBox_Audio->setCurrentText(last_audio_device_);
     }
 
+    ui->checkBox_Video->setChecked(GLOBAL->config.HasVideo());
+    ui->checkBox_Audio->setChecked(GLOBAL->config.HasAudio());
+
     if (!GLOBAL->config.GetFilePath().empty())
     {
         ui->textBrowser_FilePath->setText(QString::fromStdString(GLOBAL->config.GetFilePath()));
@@ -123,6 +127,18 @@ void DevicesDialog::on_comboBox_Audio_currentIndexChanged(const QString& arg1)
 
 void DevicesDialog::on_pushButton_Start_clicked()
 {
+    if (!ui->checkBox_Audio->isChecked() && !ui->checkBox_Video->isChecked())
+    {
+        QMessageBox::warning(this, "warning", QStringLiteral("音频和视频至少要有一个"));
+        return;
+    }
+
+    if (GLOBAL->config.GetFilePath().empty())
+    {
+        QMessageBox::warning(this, "warning", QStringLiteral("录制路径未设置"));
+        return;
+    }
+
     close();
     emit SIGNAL_CENTER->StartStream();
 }
@@ -135,10 +151,22 @@ void DevicesDialog::on_pushButton_Stop_clicked()
 
 void DevicesDialog::on_pushButton_Dir_clicked()
 {
-    QString dir = QFileDialog::getExistingDirectory(this, "请选择文件保存路径");
+    QString dir = QFileDialog::getExistingDirectory(this, QStringLiteral("请选择文件保存路径"));
     if (!dir.isEmpty())
     {
         GLOBAL->config.SetFilePath(dir.toStdString() + "/my.flv");
         ui->textBrowser_FilePath->setText(QString::fromStdString(GLOBAL->config.GetFilePath()));
     }
+}
+
+void DevicesDialog::on_checkBox_Audio_stateChanged(int arg1)
+{
+    (void) arg1;
+    GLOBAL->config.SetHasAudio(ui->checkBox_Audio->isChecked());
+}
+
+void DevicesDialog::on_checkBox_Video_stateChanged(int arg1)
+{
+    (void) arg1;
+    GLOBAL->config.SetHasVideo(ui->checkBox_Video->isChecked());
 }

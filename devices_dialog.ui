@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>627</width>
-    <height>414</height>
+    <width>550</width>
+    <height>359</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <rect>
      <x>20</x>
      <y>20</y>
-     <width>361</width>
+     <width>451</width>
      <height>91</height>
     </rect>
    </property>
@@ -35,13 +35,26 @@
      </rect>
     </property>
    </widget>
+   <widget class="QCheckBox" name="checkBox_Audio">
+    <property name="geometry">
+     <rect>
+      <x>350</x>
+      <y>50</y>
+      <width>73</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>音频</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_2">
    <property name="geometry">
     <rect>
      <x>20</x>
      <y>130</y>
-     <width>361</width>
+     <width>451</width>
      <height>91</height>
     </rect>
    </property>
@@ -58,12 +71,25 @@
      </rect>
     </property>
    </widget>
+   <widget class="QCheckBox" name="checkBox_Video">
+    <property name="geometry">
+     <rect>
+      <x>350</x>
+      <y>49</y>
+      <width>73</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>视频</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QPushButton" name="pushButton_Start">
    <property name="geometry">
     <rect>
-     <x>430</x>
-     <y>380</y>
+     <x>350</x>
+     <y>320</y>
      <width>80</width>
      <height>20</height>
     </rect>
@@ -75,8 +101,8 @@
   <widget class="QPushButton" name="pushButton_Stop">
    <property name="geometry">
     <rect>
-     <x>530</x>
-     <y>380</y>
+     <x>450</x>
+     <y>320</y>
      <width>80</width>
      <height>20</height>
     </rect>
@@ -95,13 +121,13 @@
     </rect>
    </property>
    <property name="text">
-    <string>mkv输出路径</string>
+    <string>录制路径</string>
    </property>
   </widget>
   <widget class="QTextBrowser" name="textBrowser_FilePath">
    <property name="geometry">
     <rect>
-     <x>90</x>
+     <x>80</x>
      <y>243</y>
      <width>256</width>
      <height>31</height>
@@ -111,8 +137,8 @@
   <widget class="QPushButton" name="pushButton_Dir">
    <property name="geometry">
     <rect>
-     <x>360</x>
-     <y>250</y>
+     <x>350</x>
+     <y>248</y>
      <width>80</width>
      <height>20</height>
     </rect>

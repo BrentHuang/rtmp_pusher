@@ -23,6 +23,10 @@ private slots:
     void on_pushButton_Stop_clicked();
     void on_pushButton_Dir_clicked();
 
+    void on_checkBox_Audio_stateChanged(int arg1);
+
+    void on_checkBox_Video_stateChanged(int arg1);
+
 private:
     Ui::DevicesDialog* ui;
     QString last_video_device_;

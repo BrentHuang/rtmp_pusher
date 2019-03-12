@@ -13,8 +13,14 @@ public:
     void SetVideoCaptureDevice(const std::string& device_name);
     std::string GetVideoCaptureDevice();
 
+    void SetHasVideo(bool flag);
+    bool HasVideo();
+
     void SetAudioCaptureDevice(const std::string& device_name);
     std::string GetAudioCaptureDevice();
+
+    void SetHasAudio(bool flag);
+    bool HasAudio();
 
     void SetFilePath(const std::string& file_path);
     std::string GetFilePath();
@@ -26,6 +32,8 @@ private:
     QMutex mutex_;
     std::string video_device_;
     std::string audio_device_;
+    bool has_video_;
+    bool has_audio_;
     std::string file_path_;
     bool started_;
 };

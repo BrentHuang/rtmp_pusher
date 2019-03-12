@@ -109,8 +109,15 @@ void MainWindow::on_actionDevices_triggered()
 
 void MainWindow::OnStartStream()
 {
-    input_stream_.SetVideoCaptureDevice(GLOBAL->config.GetVideoCaptureDevice());
-    input_stream_.SetAudioCaptureDevice(GLOBAL->config.GetAudioCaptureDevice());
+    if (GLOBAL->config.HasVideo())
+    {
+        input_stream_.SetVideoCaptureDevice(GLOBAL->config.GetVideoCaptureDevice());
+    }
+
+    if (GLOBAL->config.HasAudio())
+    {
+        input_stream_.SetAudioCaptureDevice(GLOBAL->config.GetAudioCaptureDevice());
+    }
 
     // 设置视频和音频的数据回调函数。当采集开始时，视频和音频数据就会传递给相应的函数去处理，
     // 在该程序中，回调函数主要对图像或音频进行编码，然后封装成FFmpeg支持的容器（例如mkv/avi/mpg/ts/mp4）
