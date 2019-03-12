@@ -56,10 +56,12 @@ private:
     int audio_bit_rate_;
 
     AVFormatContext* fmt_ctx_;
+    AVCodecContext* video_codec_ctx_;
     AVStream* video_stream_; // 里面含有video_codec_ctx
     AVFrame* yuv_frame_;
     uint8_t* out_buffer_;
 
+    AVCodecContext* audio_codec_ctx_;
     AVStream* audio_stream_; // 里面含有audio_codec_ctx
     AVAudioFifo* audio_fifo_;
     uint8_t** converted_input_samples_;

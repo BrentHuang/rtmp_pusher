@@ -25,10 +25,12 @@ AVOutputStream::AVOutputStream()
     audio_bit_rate_ = 32000;
 
     fmt_ctx_ = nullptr;
+    video_codec_ctx_ = nullptr;
     video_stream_ = nullptr;
     yuv_frame_ = nullptr;
     out_buffer_ = nullptr;
 
+    audio_codec_ctx_ = nullptr;
     audio_stream_ = nullptr;
     audio_fifo_ = nullptr;
     converted_input_samples_ = nullptr;
@@ -87,24 +89,24 @@ int AVOutputStream::Open(const std::string& file_path)
             return -1;
         }
 
-        AVCodecContext* video_codec_ctx = avcodec_alloc_context3(codec);
-        if (nullptr == video_codec_ctx)
+        video_codec_ctx_ = avcodec_alloc_context3(codec);
+        if (nullptr == video_codec_ctx_)
         {
             return -1;
         }
 
-        video_codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
-        video_codec_ctx->width = width_;
-        video_codec_ctx->height = height_;
-        video_codec_ctx->time_base.num = 1;
-        video_codec_ctx->time_base.den = frame_rate_;
-        video_codec_ctx->bit_rate = video_bit_rate_;
-        video_codec_ctx->gop_size = gop_size_;
+        video_codec_ctx_->pix_fmt = AV_PIX_FMT_YUV420P;
+        video_codec_ctx_->width = width_;
+        video_codec_ctx_->height = height_;
+        video_codec_ctx_->time_base.num = 1;
+        video_codec_ctx_->time_base.den = frame_rate_;
+        video_codec_ctx_->bit_rate = video_bit_rate_;
+        video_codec_ctx_->gop_size = gop_size_;
 
         /* Some formats want stream headers to be separate. */
         if (fmt_ctx_->oformat->flags & AVFMT_GLOBALHEADER)
         {
-            video_codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+            video_codec_ctx_->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         }
 
         AVDictionary* opts = 0;
@@ -116,10 +118,10 @@ int AVOutputStream::Open(const std::string& file_path)
             //pCodecCtx->me_range = 16;
             //pCodecCtx->max_qdiff = 4;
             //pCodecCtx->qcompress = 0.6;
-            video_codec_ctx->qmin = 10;
-            video_codec_ctx->qmax = 51;
+            video_codec_ctx_->qmin = 10;
+            video_codec_ctx_->qmax = 51;
             //Optional Param
-            video_codec_ctx->max_b_frames = 0; // 不要B帧？
+            video_codec_ctx_->max_b_frames = 0; // 不要B帧？
 
 #if 1
             //下面设置两个参数影响编码延时，如果不设置，编码器默认会缓冲很多帧
@@ -136,7 +138,7 @@ int AVOutputStream::Open(const std::string& file_path)
 #endif
         }
 
-        ret = avcodec_open2(video_codec_ctx, codec, &opts);
+        ret = avcodec_open2(video_codec_ctx_, codec, &opts);
         if (ret < 0)
         {
 //            ATLTRACE("Failed to open output video encoder! (编码器打开失败！)\n");
@@ -152,13 +154,13 @@ int AVOutputStream::Open(const std::string& file_path)
 
         video_stream_->time_base.num = 1;
         video_stream_->time_base.den = frame_rate_;
-        video_stream_->codec = video_codec_ctx;
+//        video_stream_->codec = video_codec_ctx_;
 
-//        ret = avcodec_parameters_from_context(video_stream_->codecpar, video_codec_ctx);
-//        if (ret < 0)
-//        {
-//            return -1;
-//        }
+        ret = avcodec_parameters_from_context(video_stream_->codecpar, video_codec_ctx_);
+        if (ret < 0)
+        {
+            return -1;
+        }
 
         // Initialize the buffer to store YUV frames to be encoded.
         yuv_frame_ = av_frame_alloc();
@@ -167,14 +169,14 @@ int AVOutputStream::Open(const std::string& file_path)
             return -1;
         }
 
-        out_buffer_ = (uint8_t*) av_malloc(av_image_get_buffer_size(AV_PIX_FMT_YUV420P, video_codec_ctx->width, video_codec_ctx->height, 1));
+        out_buffer_ = (uint8_t*) av_malloc(av_image_get_buffer_size(AV_PIX_FMT_YUV420P, video_codec_ctx_->width, video_codec_ctx_->height, 1));
         if (nullptr == out_buffer_)
         {
             return -1;
         }
 
         ret = av_image_fill_arrays(yuv_frame_->data, yuv_frame_->linesize, out_buffer_, AV_PIX_FMT_YUV420P,
-                                   video_codec_ctx->width, video_codec_ctx->height, 1);
+                                   video_codec_ctx_->width, video_codec_ctx_->height, 1);
         if (ret < 0)
         {
             return -1;
@@ -191,33 +193,33 @@ int AVOutputStream::Open(const std::string& file_path)
             return -1;
         }
 
-        AVCodecContext* audio_codec_ctx = avcodec_alloc_context3(codec);
-        if (nullptr == audio_codec_ctx)
+        audio_codec_ctx_ = avcodec_alloc_context3(codec);
+        if (nullptr == audio_codec_ctx_)
         {
             return -1;
         }
 
-        audio_codec_ctx->channels = channels_;
-        audio_codec_ctx->channel_layout = av_get_default_channel_layout(channels_);
-        audio_codec_ctx->sample_rate = sample_rate_;
-        audio_codec_ctx->sample_fmt = codec->sample_fmts[0];
-        audio_codec_ctx->bit_rate = audio_bit_rate_;
-        audio_codec_ctx->time_base.num = 1;
-        audio_codec_ctx->time_base.den = audio_codec_ctx->sample_rate;
+        audio_codec_ctx_->channels = channels_;
+        audio_codec_ctx_->channel_layout = av_get_default_channel_layout(channels_);
+        audio_codec_ctx_->sample_rate = sample_rate_;
+        audio_codec_ctx_->sample_fmt = codec->sample_fmts[0];
+        audio_codec_ctx_->bit_rate = audio_bit_rate_;
+        audio_codec_ctx_->time_base.num = 1;
+        audio_codec_ctx_->time_base.den = audio_codec_ctx_->sample_rate;
 
         if (AV_CODEC_ID_AAC == audio_codec_id_)
         {
             /** Allow the use of the experimental AAC encoder */
-            audio_codec_ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
+            audio_codec_ctx_->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
         }
 
         /* Some formats want stream headers to be separate. */
         if (fmt_ctx_->oformat->flags & AVFMT_GLOBALHEADER)
         {
-            audio_codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+            audio_codec_ctx_->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         }
 
-        ret = avcodec_open2(audio_codec_ctx, codec, nullptr);
+        ret = avcodec_open2(audio_codec_ctx_, codec, nullptr);
         if (ret < 0)
         {
 //            ATLTRACE("Failed to open ouput audio encoder! (编码器打开失败！)\n");
@@ -232,11 +234,17 @@ int AVOutputStream::Open(const std::string& file_path)
         }
 
         audio_stream_->time_base.num = 1;
-        audio_stream_->time_base.den = audio_codec_ctx->sample_rate;
-        audio_stream_->codec = audio_codec_ctx;
+        audio_stream_->time_base.den = audio_codec_ctx_->sample_rate;
+//        audio_stream_->codec = audio_codec_ctx_;
+
+        ret = avcodec_parameters_from_context(audio_stream_->codecpar, audio_codec_ctx_);
+        if (ret < 0)
+        {
+            return -1;
+        }
 
         // Initialize the FIFO buffer to store audio samples to be encoded.
-        audio_fifo_ = av_audio_fifo_alloc(audio_codec_ctx->sample_fmt, audio_codec_ctx->channels, 1);
+        audio_fifo_ = av_audio_fifo_alloc(audio_codec_ctx_->sample_fmt, audio_codec_ctx_->channels, 1);
         if (nullptr == audio_fifo_)
         {
             return -1;
@@ -249,7 +257,7 @@ int AVOutputStream::Open(const std::string& file_path)
         * Each pointer will later point to the audio samples of the corresponding
         * channels (although it may be nullptr for interleaved formats).
         */
-        converted_input_samples_ = (uint8_t**) calloc(audio_codec_ctx->channels, sizeof(**converted_input_samples_));
+        converted_input_samples_ = (uint8_t**) calloc(audio_codec_ctx_->channels, sizeof(**converted_input_samples_));
         if (nullptr == converted_input_samples_)
         {
 //            ATLTRACE("Could not allocate converted input sample pointers\n");
@@ -295,16 +303,6 @@ void  AVOutputStream::Close()
         }
     }
 
-    if (video_stream_ != nullptr)
-    {
-        avcodec_free_context(&video_stream_->codec);
-    }
-
-    if (audio_stream_ != nullptr)
-    {
-        avcodec_free_context(&audio_stream_->codec);
-    }
-
     if (out_buffer_)
     {
         av_free(out_buffer_);
@@ -330,6 +328,18 @@ void  AVOutputStream::Close()
         audio_fifo_ = nullptr;
     }
 
+//    if (video_codec_ctx_ != nullptr)
+//    {
+//        avcodec_free_context(&video_codec_ctx_);
+//        video_codec_ctx_ = nullptr;
+//    }
+
+//    if (audio_codec_ctx_ != nullptr)
+//    {
+//        avcodec_free_context(&audio_codec_ctx_);
+//        audio_codec_ctx_ = nullptr;
+//    }
+
     if (fmt_ctx_ != nullptr)
     {
         avio_close(fmt_ctx_->pb);
@@ -338,9 +348,11 @@ void  AVOutputStream::Close()
     }
 
     video_codec_id_ = AV_CODEC_ID_NONE;
+    video_codec_ctx_ = nullptr;
     video_stream_ = nullptr;
 
     audio_codec_id_ = AV_CODEC_ID_NONE;
+    audio_codec_ctx_ = nullptr;
     audio_stream_ = nullptr;
 }
 
@@ -367,13 +379,18 @@ int AVOutputStream::WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_
     }
 
     AVRational time_base_q = { 1, AV_TIME_BASE };
-    AVCodecContext* video_codec_ctx = video_stream_->codec;
+
+    int ret = avcodec_parameters_to_context(video_codec_ctx_, video_stream_->codecpar);
+    if (ret < 0)
+    {
+        return -1;
+    }
 
     if (nullptr == img_convert_ctx_)
     {
         //camera data may has a pix fmt of RGB or sth else,convert it to YUV420
         img_convert_ctx_ = sws_getContext(width_, height_, input_pix_fmt,
-                                          video_codec_ctx->width, video_codec_ctx->height, AV_PIX_FMT_YUV420P,
+                                          video_codec_ctx_->width, video_codec_ctx_->height, AV_PIX_FMT_YUV420P,
                                           SWS_BICUBIC, nullptr, nullptr, nullptr);
         if (nullptr == img_convert_ctx_)
         {
@@ -381,7 +398,7 @@ int AVOutputStream::WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_
         }
     }
 
-    sws_scale(img_convert_ctx_, (const uint8_t* const*) input_frame->data, input_frame->linesize, 0, video_codec_ctx->height,
+    sws_scale(img_convert_ctx_, (const uint8_t* const*) input_frame->data, input_frame->linesize, 0, video_codec_ctx_->height,
               yuv_frame_->data, yuv_frame_->linesize);
     yuv_frame_->width = input_frame->width;
     yuv_frame_->height = input_frame->height;
@@ -394,7 +411,7 @@ int AVOutputStream::WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_
 
     int enc_got_frame = 0;
 
-    int ret = avcodec_encode_video2(video_codec_ctx, &enc_pkt, yuv_frame_, &enc_got_frame);
+    ret = avcodec_encode_video2(video_codec_ctx_, &enc_pkt, yuv_frame_, &enc_got_frame);
 
     if (enc_got_frame == 1)
     {
@@ -469,8 +486,13 @@ int  AVOutputStream::WriteAudioFrame(AVStream* input_stream, AVFrame* input_fram
         first_audio_ts_ = timestamp;
     }
 
-    AVCodecContext* audio_codec_ctx = audio_stream_->codec;
-    const int output_frame_size = audio_codec_ctx->frame_size;
+    int ret = avcodec_parameters_to_context(audio_codec_ctx_, audio_stream_->codecpar);
+    if (ret < 0)
+    {
+        return -1;
+    }
+
+    const int output_frame_size = audio_codec_ctx_->frame_size;
     AVRational time_base_q = { 1, AV_TIME_BASE };
 
     //if((int64_t)(av_audio_fifo_size(m_fifo) + input_frame->nb_samples) * AV_TIME_BASE /(int64_t)(input_st->codec->sample_rate) - lTimeStamp > AV_TIME_BASE/10)
@@ -489,9 +511,9 @@ int  AVOutputStream::WriteAudioFrame(AVStream* input_stream, AVFrame* input_fram
     {
         // Initialize the resampler to be able to convert audio sample formats
         aud_convert_ctx_ = swr_alloc_set_opts(nullptr,
-                                              av_get_default_channel_layout(audio_codec_ctx->channels),
-                                              audio_codec_ctx->sample_fmt,
-                                              audio_codec_ctx->sample_rate,
+                                              av_get_default_channel_layout(audio_codec_ctx_->channels),
+                                              audio_codec_ctx_->sample_fmt,
+                                              audio_codec_ctx_->sample_rate,
                                               av_get_default_channel_layout(input_stream->codec->channels),
                                               input_stream->codec->sample_fmt,
                                               input_stream->codec->sample_rate,
@@ -516,8 +538,8 @@ int  AVOutputStream::WriteAudioFrame(AVStream* input_stream, AVFrame* input_fram
     * block for convenience.
     */
     // TODO 内存泄露
-    int ret = av_samples_alloc(converted_input_samples_, nullptr,
-                               audio_codec_ctx->channels, input_frame->nb_samples, audio_codec_ctx->sample_fmt, 0);
+    ret = av_samples_alloc(converted_input_samples_, nullptr,
+                           audio_codec_ctx_->channels, input_frame->nb_samples, audio_codec_ctx_->sample_fmt, 0);
     if (ret < 0)
     {
 //        ATLTRACE("Could not allocate converted input samples\n");
@@ -560,7 +582,7 @@ int  AVOutputStream::WriteAudioFrame(AVStream* input_stream, AVFrame* input_fram
         return -1;
     }
 
-    const int64_t timeinc = (int64_t)audio_codec_ctx->frame_size * AV_TIME_BASE / (int64_t)(input_stream->codec->sample_rate);
+    const int64_t timeinc = (int64_t)audio_codec_ctx_->frame_size * AV_TIME_BASE / (int64_t)(input_stream->codec->sample_rate);
 
     // 当前帧的时间戳不能小于上一帧的值
     if (timestamp - timeshift > last_audio_pts_)
@@ -586,7 +608,7 @@ int  AVOutputStream::WriteAudioFrame(AVStream* input_stream, AVFrame* input_fram
         * If there is less than the maximum possible frame size in the FIFO
         * buffer use this number. Otherwise, use the maximum possible frame size
         */
-        const int frame_size = FFMIN(av_audio_fifo_size(audio_fifo_), audio_codec_ctx->frame_size);
+        const int frame_size = FFMIN(av_audio_fifo_size(audio_fifo_), audio_codec_ctx_->frame_size);
 
 
         /** Initialize temporary storage for one output frame. */
@@ -598,9 +620,9 @@ int  AVOutputStream::WriteAudioFrame(AVStream* input_stream, AVFrame* input_fram
         * are assumed for simplicity.
         */
         output_frame->nb_samples = frame_size;
-        output_frame->channel_layout = audio_codec_ctx->channel_layout;
-        output_frame->format = audio_codec_ctx->sample_fmt;
-        output_frame->sample_rate = audio_codec_ctx->sample_rate;
+        output_frame->channel_layout = audio_codec_ctx_->channel_layout;
+        output_frame->format = audio_codec_ctx_->sample_fmt;
+        output_frame->sample_rate = audio_codec_ctx_->sample_rate;
 
         /**
         * Allocate the samples of the created frame. This call will make
@@ -638,7 +660,7 @@ int  AVOutputStream::WriteAudioFrame(AVStream* input_stream, AVFrame* input_fram
         * Encode the audio frame and store it in the temporary packet.
         * The output audio stream encoder is used to do this.
         */
-        if ((ret = avcodec_encode_audio2(audio_codec_ctx, &enc_pkt, output_frame, &enc_got_frame_a)) < 0)
+        if ((ret = avcodec_encode_audio2(audio_codec_ctx_, &enc_pkt, output_frame, &enc_got_frame_a)) < 0)
         {
 //            ATLTRACE("Could not encode frame\n");
             av_frame_free(&output_frame);
