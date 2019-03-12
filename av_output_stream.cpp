@@ -154,6 +154,12 @@ int AVOutputStream::Open(const std::string& file_path)
         video_stream_->time_base.den = frame_rate_;
         video_stream_->codec = video_codec_ctx;
 
+//        ret = avcodec_parameters_from_context(video_stream_->codecpar, video_codec_ctx);
+//        if (ret < 0)
+//        {
+//            return -1;
+//        }
+
         // Initialize the buffer to store YUV frames to be encoded.
         yuv_frame_ = av_frame_alloc();
         if (nullptr == yuv_frame_)
@@ -161,7 +167,7 @@ int AVOutputStream::Open(const std::string& file_path)
             return -1;
         }
 
-        out_buffer_ = (uint8_t*) av_malloc(avpicture_get_size(AV_PIX_FMT_YUV420P, video_codec_ctx->width, video_codec_ctx->height));
+        out_buffer_ = (uint8_t*) av_malloc(av_image_get_buffer_size(AV_PIX_FMT_YUV420P, video_codec_ctx->width, video_codec_ctx->height, 1));
         if (nullptr == out_buffer_)
         {
             return -1;
@@ -434,11 +440,8 @@ int AVOutputStream::WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_
         {
 //            char tmpErrString[128] = {0};
 //            ATLTRACE("Could not write video frame, error: %s\n", av_make_error_string(tmpErrString, AV_ERROR_MAX_STRING_SIZE, ret));
-            av_packet_unref(&enc_pkt);
             return ret;
         }
-
-        av_free_packet(&enc_pkt);
     }
     else if (ret == 0)
     {
@@ -638,7 +641,6 @@ int  AVOutputStream::WriteAudioFrame(AVStream* input_stream, AVFrame* input_fram
         if ((ret = avcodec_encode_audio2(audio_codec_ctx, &enc_pkt, output_frame, &enc_got_frame_a)) < 0)
         {
 //            ATLTRACE("Could not encode frame\n");
-            av_packet_unref(&enc_pkt);
             av_frame_free(&output_frame);
             return ret;
         }
@@ -675,12 +677,9 @@ int  AVOutputStream::WriteAudioFrame(AVStream* input_stream, AVFrame* input_fram
             {
 //                char tmpErrString[128] = {0};
 //                ATLTRACE("Could not write audio frame, error: %s\n", av_make_error_string(tmpErrString, AV_ERROR_MAX_STRING_SIZE, ret));
-                av_packet_unref(&enc_pkt);
                 av_frame_free(&output_frame);
                 return ret;
             }
-
-            av_packet_unref(&enc_pkt);
         }//if (enc_got_frame_a)
 
         nb_samples_ += output_frame->nb_samples;
