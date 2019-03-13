@@ -10,39 +10,39 @@ Config::Config() : mutex_(), video_device_(), audio_device_(),
     compos.set();
     compos.reset(COMPOS_BIT_SYSTEM_VOICE);
     compos.reset(COMPOS_BIT_DESKTOP);
-    qDebug() << QString::fromStdString(compos.to_string()); // 1100
+//    qDebug() << QString::fromStdString(compos.to_string()); // 1100
     compos_vec_.push_back(compos);
 
     compos.set();
     compos.reset(COMPOS_BIT_CAMERA);
-    qDebug() << QString::fromStdString(compos.to_string()); // 1011
+//    qDebug() << QString::fromStdString(compos.to_string()); // 1011
     compos_vec_.push_back(compos);
 
     compos.set();
     compos.reset(COMPOS_BIT_SYSTEM_VOICE);
     compos.reset(COMPOS_BIT_DESKTOP);
     compos.reset(COMPOS_BIT_CAMERA);
-    qDebug() << QString::fromStdString(compos.to_string()); // 1000
+//    qDebug() << QString::fromStdString(compos.to_string()); // 1000
     compos_vec_.push_back(compos);
 
     compos.set();
     compos.reset(COMPOS_BIT_SYSTEM_VOICE);
     compos.reset(COMPOS_BIT_DESKTOP);
     compos.reset(COMPOS_BIT_MICROPHONE);
-    qDebug() << QString::fromStdString(compos.to_string()); // 0100
+//    qDebug() << QString::fromStdString(compos.to_string()); // 0100
     compos_vec_.push_back(compos);
 
     compos.set();
     compos.reset(COMPOS_BIT_CAMERA);
     compos.reset(COMPOS_BIT_MICROPHONE);
-    qDebug() << QString::fromStdString(compos.to_string()); // 0011
+//    qDebug() << QString::fromStdString(compos.to_string()); // 0011
     compos_vec_.push_back(compos);
 
     compos.set();
     compos.reset(COMPOS_BIT_CAMERA);
     compos.reset(COMPOS_BIT_MICROPHONE);
     compos.reset(COMPOS_BIT_SYSTEM_VOICE);
-    qDebug() << QString::fromStdString(compos.to_string()); // 0010
+//    qDebug() << QString::fromStdString(compos.to_string()); // 0010
     compos_vec_.push_back(compos);
 
     compos_.reset();

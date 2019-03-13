@@ -28,8 +28,8 @@
    <widget class="QComboBox" name="comboBox_Audio">
     <property name="geometry">
      <rect>
-      <x>9</x>
-      <y>24</y>
+      <x>11</x>
+      <y>25</y>
       <width>241</width>
       <height>22</height>
      </rect>
@@ -51,8 +51,8 @@
    <widget class="QComboBox" name="comboBox_Video">
     <property name="geometry">
      <rect>
-      <x>9</x>
-      <y>24</y>
+      <x>10</x>
+      <y>29</y>
       <width>241</width>
       <height>22</height>
      </rect>
@@ -61,7 +61,7 @@
    <widget class="QComboBox" name="comboBox_VideoProp">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>11</x>
       <y>60</y>
       <width>241</width>
       <height>22</height>
@@ -114,7 +114,7 @@
      <x>80</x>
      <y>241</y>
      <width>201</width>
-     <height>31</height>
+     <height>30</height>
     </rect>
    </property>
   </widget>
@@ -211,8 +211,8 @@
    <widget class="QComboBox" name="comboBox_AudioSpeaker">
     <property name="geometry">
      <rect>
-      <x>9</x>
-      <y>24</y>
+      <x>11</x>
+      <y>25</y>
       <width>241</width>
       <height>22</height>
      </rect>
