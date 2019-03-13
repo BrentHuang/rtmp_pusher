@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QCameraInfo>
 #include <QCamera>
+#include <QCameraViewfinder>
 #include <QAudioDeviceInfo>
 #include <QButtonGroup>
 
@@ -259,27 +260,30 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
     for (auto ci : cis)
     {
         qDebug() << ci.description() << ci.deviceName() << ci.orientation() << ci.position();
-        ui->comboBox_Video->addItem(ci.description());
+        ui->comboBox_Video->addItem(ci.description(), QVariant(ci.deviceName()));
 
         QCamera* camera = new QCamera(ci);
-        camera->start();
+//        QCameraViewfinder* viewfinder = new QCameraViewfinder();
+//        camera->setViewfinder(viewfinder);
+
+        camera->load();
 
         // 返回支持的取景器分辨率列表（一定要打开摄像头)
-//        for (auto resolution : camera->supportedViewfinderResolutions())
-//        {
-//            //dosomething about the resolution
-//            qDebug() << resolution;
-//        }
+        for (auto resolution : camera->supportedViewfinderResolutions())
+        {
+            //dosomething about the resolution
+            qDebug() << resolution;
+        }
 
-//        for (auto frame_rate_range : camera->supportedViewfinderFrameRateRanges())
-//        {
-//            qDebug() << frame_rate_range.minimumFrameRate << frame_rate_range.maximumFrameRate;
-//        }
+        for (auto frame_rate_range : camera->supportedViewfinderFrameRateRanges())
+        {
+            qDebug() << frame_rate_range.minimumFrameRate << frame_rate_range.maximumFrameRate;
+        }
 
-//        for (auto pixel_format : camera->supportedViewfinderPixelFormats())
-//        {
-//            qDebug() << pixel_format;
-//        }
+        for (auto pixel_format : camera->supportedViewfinderPixelFormats())
+        {
+            qDebug() << pixel_format;
+        }
 
         for (auto vf_settings : camera->supportedViewfinderSettings())
         {
@@ -288,7 +292,7 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
                      << vf_settings.resolution();
         }
 
-        camera->stop();
+        camera->unload();
         delete camera;
     }
 
@@ -362,7 +366,10 @@ void DevicesDialog::on_comboBox_Video_currentIndexChanged(const QString& arg1)
         if (ci.description() == arg1)
         {
             QCamera* camera = new QCamera(ci);
-            camera->start();
+//            QCameraViewfinder* viewfinder = new QCameraViewfinder();
+//            camera->setViewfinder(viewfinder);
+
+            camera->load();
 
             for (auto vf_settings : camera->supportedViewfinderSettings())
             {
@@ -398,12 +405,13 @@ void DevicesDialog::on_comboBox_Video_currentIndexChanged(const QString& arg1)
                 ui->comboBox_VideoProp->addItem(item);
             }
 
-            camera->stop();
+            camera->unload();
+//            delete viewfinder;
             delete camera;
         }
     }
 
-    GLOBAL->config.SetVideoCaptureDevice(arg1.toStdString());
+    GLOBAL->config.SetVideoCaptureDevice(ui->comboBox_Video->currentData().toString().toStdString());
 }
 
 void DevicesDialog::on_comboBox_Audio_currentIndexChanged(const QString& arg1)
