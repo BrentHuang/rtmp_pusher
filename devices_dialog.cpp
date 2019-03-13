@@ -207,8 +207,9 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
 #elif defined(Q_OS_LINUX)
     AlsaDeviceList();
     ui->comboBox_Audio->addItem(QString::fromStdString("default"));
+    ui->comboBox_Audio->addItem(QString::fromStdString("4")); // cat /proc/asound/devices
     ui->comboBox_Audio->addItem(QString::fromStdString("/dev/snd/pcmC0D0c"));
-    ui->comboBox_Video->addItem(QString::fromStdString("default"));
+    ui->comboBox_Video->addItem(QString::fromStdString("default")); // v4l2-ctl --list-devices
     ui->comboBox_Video->addItem(QString::fromStdString("/dev/video0"));
 #endif
 
