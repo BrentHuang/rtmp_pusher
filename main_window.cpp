@@ -115,7 +115,9 @@ void MainWindow::OnStartStream()
 
         if (0 == input_stream_.GetVideoInfo(cx, cy, fps, pixel_fmt))
         {
-            output_stream_.SetVideoCodecProp(AV_CODEC_ID_H264, fps, 500000, 100, cx, cy); // gop_size=2*fps，视频比特率：TODO
+            const int bit_rate = (int) (1200000.0 * cy / 1080); // 基本所有摄像头都支持的分辨率："320*240", "640*480", "1280*720"
+            qDebug() << "output video bit rate:" << bit_rate;
+            output_stream_.SetVideoCodecProp(AV_CODEC_ID_H264, fps, bit_rate, fps * 2, cx, cy); // gop_size=2*fps，视频比特率可以按比例调：TODO
         }
 
         AVSampleFormat sample_fmt;

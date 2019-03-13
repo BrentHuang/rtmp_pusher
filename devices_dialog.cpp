@@ -355,6 +355,7 @@ DevicesDialog::~DevicesDialog()
 void DevicesDialog::on_comboBox_Video_currentIndexChanged(const QString& arg1)
 {
     last_video_device_ = QString::fromStdString(GLOBAL->config.GetVideoCaptureDevice());
+    ui->comboBox_VideoProp->clear();
 
     for (auto ci : QCameraInfo::availableCameras())
     {

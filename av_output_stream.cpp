@@ -438,10 +438,8 @@ int AVOutputStream::WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_
         //enc_pkt.duration = av_rescale_q(calc_duration, time_base_q, time_base); //(double)(calc_duration)*(double)(av_q2d(time_base_q)) / (double)(av_q2d(time_base));
         //enc_pkt.pos = -1;
 #else
-
         //enc_pkt.pts= av_rescale_q(lTimeStamp, time_base_q, video_st->time_base);
         enc_pkt.pts = (int64_t)video_stream_->time_base.den * timestamp / AV_TIME_BASE;
-
 #endif
 
         video_frame_count_++;

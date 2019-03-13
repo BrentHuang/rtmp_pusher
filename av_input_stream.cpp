@@ -441,7 +441,6 @@ int AVInputStream::ReadAudioPackets()
         else
         {
             qDebug() << "avcodec_receive_frame failed";
-
         }
 
         av_frame_free(&frame);
