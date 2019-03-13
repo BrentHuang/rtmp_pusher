@@ -5,7 +5,7 @@
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "oleaut32.lib")
 
-int DSGetAVInputDevices(std::vector<DeviceCtx>& device_ctx_vec, REFGUID guid_value)
+int DSGetAVDevices(std::vector<DeviceCtx>& device_ctx_vec, REFGUID guid_value)
 {
     DeviceCtx name;
     HRESULT hr;

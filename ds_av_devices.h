@@ -34,6 +34,7 @@ extern "C"
     guidValue：
         CLSID_AudioInputDeviceCategory：获取音频输入设备列表
         CLSID_VideoInputDeviceCategory：获取视频输入设备列表
+        CLSID_AudioRendererCategory：获取扬声器列表
 返回值：
     错误代码 =0表示成功，否则失败
 说明：
@@ -41,7 +42,7 @@ extern "C"
     列表中的第一个设备为系统缺省设备
     capGetDriverDescription只能获得设备驱动名
 */
-int DSGetAVInputDevices(std::vector<DeviceCtx>& device_ctx_vec, REFGUID guid_value);
+int DSGetAVDevices(std::vector<DeviceCtx>& device_ctx_vec, REFGUID guid_value);
 
 #ifdef __cplusplus
 }

@@ -23,8 +23,9 @@ public:
     ~AVInputStream();
 
 public:
-    void SetVideoCaptureDevice(const std::string& device_name);
-    void SetAudioCaptureDevice(const std::string& device_name);
+    void SetVideoCaptureDevice(const std::string& fmt_name, const std::string& device_name, bool video_prefix);
+    void SetAudioCaptureDevice(const std::string& fmt_name, const std::string& device_name, bool audio_prefix);
+    void SetAudio2CaptureDevice(const std::string& fmt_name, const std::string& device_name, bool audio_prefix);
 
     void SetVideoCaptureCB(VideoCaptureCB cb);
     void SetAudioCaptureCB(AudioCaptureCB cb);
@@ -45,8 +46,17 @@ protected:
     int ReadAudioPackets();
 
 protected:
-    std::string video_device_;
-    std::string audio_device_;
+    std::string video_fmt_name_;
+    std::string video_device_name_;
+    bool video_prefix_;
+
+    std::string audio_fmt_name_;
+    std::string audio_device_name_;
+    bool audio_prefix_;
+
+    std::string audio2_fmt_name_;
+    std::string audio2_device_name_;
+    bool audio2_prefix_;
 
     VideoCaptureCB video_cb_;
     AudioCaptureCB audio_cb_;

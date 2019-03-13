@@ -10,7 +10,7 @@ extern "C" {
 }
 #endif
 
-AVInputStream::AVInputStream() : video_device_(), audio_device_(), write_file_mutex_()
+AVInputStream::AVInputStream() : video_device_name_(), audio_device_name_(), write_file_mutex_()
 {
     video_cb_ = nullptr;
     audio_cb_ = nullptr;
@@ -34,16 +34,28 @@ AVInputStream::~AVInputStream()
 {
 }
 
-void AVInputStream::SetVideoCaptureDevice(const std::string& device_name)
+void AVInputStream::SetVideoCaptureDevice(const std::string& fmt_name, const std::string& device_name, bool video_prefix)
 {
-    video_device_ = device_name;
-    qDebug() << QString::fromStdString(video_device_);
+    video_fmt_name_ = fmt_name;
+    video_device_name_ = device_name;
+    video_prefix_ = video_prefix;
+    qDebug() << QString::fromStdString(video_fmt_name_) << QString::fromStdString(video_device_name_);
 }
 
-void AVInputStream::SetAudioCaptureDevice(const std::string& device_name)
+void AVInputStream::SetAudioCaptureDevice(const std::string& fmt_name, const std::string& device_name, bool audio_prefix)
 {
-    audio_device_ = device_name;
-    qDebug() << QString::fromStdString(audio_device_);
+    audio_fmt_name_ = fmt_name;
+    audio_device_name_ = device_name;
+    audio_prefix_ = audio_prefix;
+    qDebug() << QString::fromStdString(audio_fmt_name_) << QString::fromStdString(audio_device_name_);
+}
+
+void AVInputStream::SetAudio2CaptureDevice(const std::string& fmt_name, const std::string& device_name, bool audio_prefix)
+{
+    audio2_fmt_name_ = fmt_name;
+    audio2_device_name_ = device_name;
+    audio2_prefix_ = audio_prefix;
+    qDebug() << QString::fromStdString(audio2_fmt_name_) << QString::fromStdString(audio2_device_name_);
 }
 
 void AVInputStream::SetVideoCaptureCB(VideoCaptureCB cb)
@@ -58,39 +70,32 @@ void AVInputStream::SetAudioCaptureCB(AudioCaptureCB cb)
 
 int AVInputStream::Open()
 {
-    if (video_device_.empty() && audio_device_.empty())
+    if (!video_fmt_name_.empty() && !video_device_name_.empty())
     {
-        qDebug() << "you have not set any capture device";
-        return -1;
-    }
+        std::string device_name = video_device_name_;
 
-    AVDictionary* opts = nullptr;
+        if (video_prefix_)
+        {
+            device_name = "video=" + video_device_name_;
+        }
 
-    // if not setting rtbufsize, error messages will be shown in cmd, but you can still watch or record the stream
-    // correctly in most time. setting rtbufsize will erase those error messages, however, larger rtbufsize will bring latency
-    av_dict_set(&opts, "rtbufsize", "10M", 0); // TODO
-
-    if (!video_device_.empty())
-    {
-#if defined(Q_OS_WIN)
-        const std::string device_name = "video=" + video_device_;
-#elif defined(Q_OS_LINUX)
-        const std::string device_name = video_device_;
-#endif
-
-#if defined(Q_OS_WIN)
-        video_input_fmt_ = av_find_input_format("dshow");
-#elif defined(Q_OS_LINUX)
-        video_input_fmt_ = av_find_input_format("video4linux2");
-#endif
+        video_input_fmt_ = av_find_input_format(video_fmt_name_.c_str());
         if (nullptr == video_input_fmt_)
         {
             qDebug() << "you may missed call 'avdevice_register_all'";
             return -1;
         }
 
+        // TODO 在这里通过opts可以设置采集的分辨率、比特率、帧率、pixel format等参数
+        AVDictionary* video_device_opts = nullptr;
+        // if not setting rtbufsize, error messages will be shown in cmd, but you can still watch or record the stream
+        // correctly in most time. setting rtbufsize will erase those error messages, however, larger rtbufsize will bring latency
+        av_dict_set(&video_device_opts, "rtbufsize", "10M", 0); // TODO 在分辨率、帧率比较高的时候，这个buf size要设大一点？
+//        av_dict_set(&video_device_opts, "video_size", "640x480", 0);
+//        av_dict_set(&video_device_opts, "framerate", "15", 0);
+
         // 打开设备
-        int ret = avformat_open_input(&video_fmt_ctx_, device_name.c_str(), video_input_fmt_, &opts);
+        int ret = avformat_open_input(&video_fmt_ctx_, device_name.c_str(), video_input_fmt_, &video_device_opts);
         if (ret != 0)
         {
             qDebug() << "can not open input video stream";
@@ -133,27 +138,25 @@ int AVInputStream::Open()
         }
     }
 
-    if (!audio_device_.empty())
+    if (!audio_fmt_name_.empty() && !audio_device_name_.empty())
     {
-#if defined(Q_OS_WIN)
-        const std::string device_name = "audio=" + audio_device_;
-#elif defined(Q_OS_LINUX)
-        const std::string device_name = audio_device_;
-#endif
+        std::string device_name = audio_device_name_;
 
-#if defined(Q_OS_WIN)
-        audio_input_fmt_ = av_find_input_format("dshow");
-#elif defined(Q_OS_LINUX)
-        audio_input_fmt_ = av_find_input_format("alsa");
-#endif
+        if (audio_prefix_)
+        {
+            device_name = "audio=" + audio_device_name_;
+        }
+
+        audio_input_fmt_ = av_find_input_format(audio_fmt_name_.c_str());
         if (nullptr == audio_input_fmt_)
         {
             qDebug() << "you may missed call 'avdevice_register_all'";
             return -1;
         }
 
-        // Set own audio device's name
-        int ret = avformat_open_input(&audio_fmt_ctx_, device_name.c_str(), audio_input_fmt_, &opts);
+        AVDictionary* audio_device_opts = nullptr;
+
+        int ret = avformat_open_input(&audio_fmt_ctx_, device_name.c_str(), audio_input_fmt_, &audio_device_opts);
         if (ret != 0)
         {
 //            ATLTRACE("Couldn't open input audio stream.（无法打开输入流）\n");
@@ -265,12 +268,12 @@ int AVInputStream::StartCapture()
     start_time_ = av_gettime();
     exit_thread_ = false;
 
-    if (!video_device_.empty())
+    if (!video_device_name_.empty())
     {
         capture_video_thread_ = new std::thread(CaptureVideoThreadFunc, this);
     }
 
-    if (!audio_device_.empty())
+    if (!audio_device_name_.empty())
     {
         capture_audio_thread_ = new std::thread(CaptureAudioThreadFunc, this);
     }
@@ -289,7 +292,6 @@ int AVInputStream::GetVideoInfo(int& width, int& height, int& frame_rate, AVPixe
     height = video_fmt_ctx_->streams[video_index_]->codec->height;
 
     AVStream* stream = video_fmt_ctx_->streams[video_index_];
-    //frame_rate = stream->avg_frame_rate.num/stream->avg_frame_rate.den;
 
     if (stream->r_frame_rate.den > 0)
     {
@@ -298,6 +300,10 @@ int AVInputStream::GetVideoInfo(int& width, int& height, int& frame_rate, AVPixe
     else if (stream->codec->framerate.den > 0)
     {
         frame_rate = stream->codec->framerate.num / stream->codec->framerate.den;
+    }
+    else
+    {
+        frame_rate = stream->avg_frame_rate.num / stream->avg_frame_rate.den;
     }
 
     pix_fmt = stream->codec->pix_fmt;

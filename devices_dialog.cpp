@@ -3,6 +3,10 @@
 #include <QOperatingSystemVersion>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QCameraInfo>
+#include <QCamera>
+#include <QAudioDeviceInfo>
+#include <QButtonGroup>
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,9 +17,11 @@ extern "C" {
 }
 #endif
 
+//#include <dshowcapture.hpp>
+
 #include "ui_devices_dialog.h"
-#include "ds_av_devices.h"
-#include "mf_av_devices.h"
+//#include "ds_av_devices.h"
+//#include "mf_av_devices.h"
 #include "global.h"
 #include "signal_center.h"
 
@@ -158,62 +164,151 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
 {
     ui->setupUi(this);
 
-#if defined(Q_OS_WIN)
-    std::vector<DeviceCtx> video_device_vec;
-    std::vector<DeviceCtx> audio_device_vec;
+    QButtonGroup* button_group = new QButtonGroup(this);
+    button_group->addButton(ui->checkBox_Video, 1);
+    button_group->addButton(ui->checkBox_VideoDesktop, 2);
 
-    if (QOperatingSystemVersion::current() >= QOperatingSystemVersion::Windows10)
+//#if defined(Q_OS_WIN)
+//    std::vector<DShow::VideoDevice> video_devices;
+//    std::vector<DShow::AudioDevice> audio_devices;
+//    DShow::Device::EnumVideoDevices(video_devices);
+//    DShow::Device::EnumAudioDevices(audio_devices);
+
+//    for (auto video_device : video_devices)
+//    {
+//        qDebug() << QString::fromStdWString(video_device.name);
+
+//        for (auto x : video_device.caps)
+//        {
+//            qDebug() << x.minCX << x.minCY << x.maxCX << x.maxCY << x.minInterval << x.maxInterval
+//                     << x.granularityCX << x.granularityCY << (int) x.format;
+//        }
+//    }
+
+//    std::vector<DeviceCtx> video_device_vec;
+//    std::vector<DeviceCtx> audio_device_vec;
+//    std::vector<DeviceCtx> audio2_device_vec;
+
+//    if (QOperatingSystemVersion::current() >= QOperatingSystemVersion::Windows10)
+//    {
+//        if (MFGetAVDevices(video_device_vec, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID) != 0)
+//        {
+//            qDebug() << "no video devices";
+//            return;
+//        }
+
+//        if (MFGetAVDevices(audio_device_vec, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_AUDCAP_GUID) != 0)
+//        {
+//            qDebug() << "no audio devices";
+//            return;
+//        }
+//    }
+//    else
+//    {
+//        if (DSGetAVDevices(video_device_vec, CLSID_VideoInputDeviceCategory) != 0)
+//        {
+//            qDebug() << "no video devices";
+//            return;
+//        }
+
+//        if (DSGetAVDevices(audio_device_vec, CLSID_AudioInputDeviceCategory) != 0)
+//        {
+//            qDebug() << "no audio devices";
+//            return;
+//        }
+
+//        if (DSGetAVDevices(audio2_device_vec, CLSID_AudioRendererCategory) != 0)
+//        {
+//            qDebug() << "no audio2(speaker) devices";
+//            return;
+//        }
+//    }
+
+//    qDebug() << "video input devices:";
+//    for (int i = 0; i < (int) video_device_vec.size(); ++i)
+//    {
+//        qDebug() << i << QString::fromWCharArray(video_device_vec[i].FriendlyName)
+//                 << QString::fromWCharArray(video_device_vec[i].MonikerName);
+//        ui->comboBox_Video->addItem(QString::fromWCharArray(video_device_vec[i].FriendlyName));
+//    }
+
+//    qDebug() << "audio input devices:";
+//    for (int i = 0; i < (int) audio_device_vec.size(); ++i)
+//    {
+//        qDebug() << i << QString::fromWCharArray(audio_device_vec[i].FriendlyName)
+//                 << QString::fromWCharArray(audio_device_vec[i].MonikerName);
+//        ui->comboBox_Audio->addItem(QString::fromWCharArray(audio_device_vec[i].FriendlyName));
+//    }
+
+//    qDebug() << "audio2(speaker) input devices:";
+//    for (int i = 0; i < (int) audio2_device_vec.size(); ++i)
+//    {
+//        qDebug() << i << QString::fromWCharArray(audio2_device_vec[i].FriendlyName)
+//                 << QString::fromWCharArray(audio2_device_vec[i].MonikerName);
+//        ui->comboBox_AudioSpeaker->addItem(QString::fromWCharArray(audio2_device_vec[i].FriendlyName));
+//    }
+//#elif defined(Q_OS_LINUX)
+//    AlsaDeviceList();
+//    ui->comboBox_Audio->addItem(QString::fromStdString("default"));
+//    ui->comboBox_Audio->addItem(QString::fromStdString("4")); // cat /proc/asound/devices
+//    ui->comboBox_Audio->addItem(QString::fromStdString("/dev/snd/pcmC0D0c"));
+//    ui->comboBox_Video->addItem(QString::fromStdString("default")); // v4l2-ctl --list-devices
+//    ui->comboBox_Video->addItem(QString::fromStdString("/dev/video0"));
+//#endif
+    auto cis = QCameraInfo::availableCameras();
+    for (auto ci : cis)
     {
-        if (MFGetAVInputDevices(video_device_vec, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID) != 0)
+        qDebug() << ci.description() << ci.deviceName() << ci.orientation() << ci.position();
+        ui->comboBox_Video->addItem(ci.description());
+
+        QCamera* camera = new QCamera(ci);
+        camera->start();
+
+        // 返回支持的取景器分辨率列表（一定要打开摄像头)
+//        for (auto resolution : camera->supportedViewfinderResolutions())
+//        {
+//            //dosomething about the resolution
+//            qDebug() << resolution;
+//        }
+
+//        for (auto frame_rate_range : camera->supportedViewfinderFrameRateRanges())
+//        {
+//            qDebug() << frame_rate_range.minimumFrameRate << frame_rate_range.maximumFrameRate;
+//        }
+
+//        for (auto pixel_format : camera->supportedViewfinderPixelFormats())
+//        {
+//            qDebug() << pixel_format;
+//        }
+
+        for (auto vf_settings : camera->supportedViewfinderSettings())
         {
-            qDebug() << "no video devices";
-            return;
+            qDebug() << vf_settings.minimumFrameRate() << vf_settings.maximumFrameRate()
+                     << vf_settings.pixelAspectRatio() << vf_settings.pixelFormat()
+                     << vf_settings.resolution();
         }
 
-        if (MFGetAVInputDevices(audio_device_vec, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_AUDCAP_GUID) != 0)
-        {
-            qDebug() << "no audio devices";
-            return;
-        }
-    }
-    else
-    {
-        if (DSGetAVInputDevices(video_device_vec, CLSID_VideoInputDeviceCategory) != 0)
-        {
-            qDebug() << "no video devices";
-            return;
-        }
-
-        if (DSGetAVInputDevices(audio_device_vec, CLSID_AudioInputDeviceCategory) != 0)
-        {
-            qDebug() << "no audio devices";
-            return;
-        }
-    }
-
-    qDebug() << "video input devices:";
-    for (int i = 0; i < (int) video_device_vec.size(); ++i)
-    {
-        qDebug() << i << QString::fromWCharArray(video_device_vec[i].FriendlyName)
-                 << QString::fromWCharArray(video_device_vec[i].MonikerName);
-        ui->comboBox_Video->addItem(QString::fromWCharArray(video_device_vec[i].FriendlyName));
+        camera->stop();
+        delete camera;
     }
 
     qDebug() << "audio input devices:";
-    for (int i = 0; i < (int) audio_device_vec.size(); ++i)
+    for (auto adi : QAudioDeviceInfo::availableDevices(QAudio::Mode::AudioInput))
     {
-        qDebug() << i << QString::fromWCharArray(audio_device_vec[i].FriendlyName)
-                 << QString::fromWCharArray(audio_device_vec[i].MonikerName);
-        ui->comboBox_Audio->addItem(QString::fromWCharArray(audio_device_vec[i].FriendlyName));
+        qDebug() << adi.deviceName() << adi.supportedSampleRates() << adi.supportedSampleSizes()
+                 << adi.supportedSampleTypes() << adi.supportedByteOrders()
+                 << adi.supportedChannelCounts();
+        ui->comboBox_Audio->addItem(adi.deviceName());
     }
-#elif defined(Q_OS_LINUX)
-    AlsaDeviceList();
-    ui->comboBox_Audio->addItem(QString::fromStdString("default"));
-    ui->comboBox_Audio->addItem(QString::fromStdString("4")); // cat /proc/asound/devices
-    ui->comboBox_Audio->addItem(QString::fromStdString("/dev/snd/pcmC0D0c"));
-    ui->comboBox_Video->addItem(QString::fromStdString("default")); // v4l2-ctl --list-devices
-    ui->comboBox_Video->addItem(QString::fromStdString("/dev/video0"));
-#endif
+
+    qDebug() << "audio output devices:";
+    for (auto adi : QAudioDeviceInfo::availableDevices(QAudio::Mode::AudioOutput))
+    {
+        qDebug() << adi.deviceName() << adi.supportedSampleRates() << adi.supportedSampleSizes()
+                 << adi.supportedSampleTypes() << adi.supportedByteOrders()
+                 << adi.supportedChannelCounts();
+        ui->comboBox_AudioSpeaker->addItem(adi.deviceName());
+    }
 
     if (!last_video_device_.isEmpty())
     {
@@ -225,8 +320,15 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
         ui->comboBox_Audio->setCurrentText(last_audio_device_);
     }
 
-    ui->checkBox_Video->setChecked(GLOBAL->config.HasVideo());
-    ui->checkBox_Audio->setChecked(GLOBAL->config.HasAudio());
+    if (!last_audio2_device_.isEmpty())
+    {
+        ui->comboBox_AudioSpeaker->setCurrentText(last_audio2_device_);
+    }
+
+    ui->checkBox_Video->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA));
+    ui->checkBox_Audio->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE));
+    ui->checkBox_VideoDesktop->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP));
+    ui->checkBox_AudioSystem->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_SYSTEM_VOICE));
 
     if (!GLOBAL->config.GetFilePath().empty())
     {
@@ -253,6 +355,53 @@ DevicesDialog::~DevicesDialog()
 void DevicesDialog::on_comboBox_Video_currentIndexChanged(const QString& arg1)
 {
     last_video_device_ = QString::fromStdString(GLOBAL->config.GetVideoCaptureDevice());
+
+    for (auto ci : QCameraInfo::availableCameras())
+    {
+        if (ci.description() == arg1)
+        {
+            QCamera* camera = new QCamera(ci);
+            camera->start();
+
+            for (auto vf_settings : camera->supportedViewfinderSettings())
+            {
+                QVideoFrame::PixelFormat pix_fmt = vf_settings.pixelFormat();
+                QString pix_fmt_str;
+
+                switch (pix_fmt)
+                {
+                    case QVideoFrame::Format_YUYV:
+                    {
+                        pix_fmt_str = "Format_YUYV";
+                    }
+                    break;
+
+                    case QVideoFrame::Format_Jpeg:
+                    {
+                        pix_fmt_str = "Format_Jpeg";
+                    }
+                    break;
+
+                    default:
+                    {
+                        pix_fmt_str = QString("%1").arg((int) pix_fmt);
+                    }
+                    break;
+                }
+
+                QString item = QString("%1x%2 %3 %4 %5").arg(vf_settings.resolution().width())
+                               .arg(vf_settings.resolution().height())
+                               .arg(vf_settings.minimumFrameRate())
+                               .arg(vf_settings.maximumFrameRate())
+                               .arg(pix_fmt_str);
+                ui->comboBox_VideoProp->addItem(item);
+            }
+
+            camera->stop();
+            delete camera;
+        }
+    }
+
     GLOBAL->config.SetVideoCaptureDevice(arg1.toStdString());
 }
 
@@ -262,11 +411,17 @@ void DevicesDialog::on_comboBox_Audio_currentIndexChanged(const QString& arg1)
     GLOBAL->config.SetAudioCaptureDevice(arg1.toStdString());
 }
 
+void DevicesDialog::on_comboBox_AudioSpeaker_currentIndexChanged(const QString& arg1)
+{
+    last_audio2_device_ = QString::fromStdString(GLOBAL->config.GetAudio2CaptureDevice());
+    GLOBAL->config.SetAudio2CaptureDevice(arg1.toStdString());
+}
+
 void DevicesDialog::on_pushButton_Start_clicked()
 {
-    if (!ui->checkBox_Audio->isChecked() && !ui->checkBox_Video->isChecked())
+    if (!GLOBAL->config.IsValidComposSet())
     {
-        QMessageBox::warning(this, "warning", QStringLiteral("音频和视频至少要有一个"));
+        QMessageBox::warning(this, "warning", QStringLiteral("请重新选择音频&视频采集控制组合"));
         return;
     }
 
@@ -299,11 +454,23 @@ void DevicesDialog::on_pushButton_Dir_clicked()
 void DevicesDialog::on_checkBox_Audio_stateChanged(int arg1)
 {
     (void) arg1;
-    GLOBAL->config.SetHasAudio(ui->checkBox_Audio->isChecked());
+    GLOBAL->config.SetCompos(COMPOS_BIT_MICROPHONE, ui->checkBox_Audio->isChecked());
 }
 
 void DevicesDialog::on_checkBox_Video_stateChanged(int arg1)
 {
     (void) arg1;
-    GLOBAL->config.SetHasVideo(ui->checkBox_Video->isChecked());
+    GLOBAL->config.SetCompos(COMPOS_BIT_CAMERA, ui->checkBox_Video->isChecked());
+}
+
+void DevicesDialog::on_checkBox_AudioSystem_stateChanged(int arg1)
+{
+    (void) arg1;
+    GLOBAL->config.SetCompos(COMPOS_BIT_SYSTEM_VOICE, ui->checkBox_AudioSystem->isChecked());
+}
+
+void DevicesDialog::on_checkBox_VideoDesktop_stateChanged(int arg1)
+{
+    (void) arg1;
+    GLOBAL->config.SetCompos(COMPOS_BIT_DESKTOP, ui->checkBox_VideoDesktop->isChecked());
 }

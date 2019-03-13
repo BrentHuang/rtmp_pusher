@@ -41,7 +41,7 @@ extern "C"
     capGetDriverDescription只能获得设备驱动名
     操作系统要求Windows 7及以上版本（关键）
 */
-int MFGetAVInputDevices(std::vector<DeviceCtx>& device_ctx_vec, REFGUID guid_value);
+int MFGetAVDevices(std::vector<DeviceCtx>& device_ctx_vec, REFGUID guid_value);
 
 #ifdef __cplusplus
 }

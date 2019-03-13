@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui multimedia multimediawidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -32,12 +32,14 @@ win32 {
     THIRD_PARTY_INSTALL_PREFIX = D:/third_party
 
     INCLUDEPATH += $${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/include
+#        $${THIRD_PARTY_INSTALL_PREFIX}/libdshowcapture/include
     LIBS += -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavcodec \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavformat \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavutil \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavdevice \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lswscale \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lswresample
+#        -L$${THIRD_PARTY_INSTALL_PREFIX}/libdshowcapture/lib -llibdshowcapture
 }
 
 macx {
@@ -70,8 +72,6 @@ SOURCES += \
         main_window.cpp \
     av_input_stream.cpp \
     av_output_stream.cpp \
-    mf_av_devices.cpp \
-    ds_av_devices.cpp \
     devices_dialog.cpp \
     config.cpp \
     signal_center.cpp
@@ -80,8 +80,6 @@ HEADERS += \
         main_window.h \
     av_input_stream.h \
     av_output_stream.h \
-    mf_av_devices.h \
-    ds_av_devices.h \
     devices_dialog.h \
     config.h \
     signal_center.h \

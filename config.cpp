@@ -1,10 +1,60 @@
 #include "config.h"
+#include <QDebug>
 #include <QMutexLocker>
+#include <qsystemdetection.h>
 
-Config::Config() : mutex_(), video_device_(), audio_device_()
+Config::Config() : mutex_(), video_device_(), audio_device_(),
+    audio2_device_(), compos_vec_(), compos_(), file_path_()
 {
-    has_video_ = true;
-    has_audio_ = true;
+    std::bitset<COMPOS_BIT_MAX> compos;
+    compos.set();
+    compos.reset(COMPOS_BIT_SYSTEM_VOICE);
+    compos.reset(COMPOS_BIT_DESKTOP);
+    qDebug() << QString::fromStdString(compos.to_string()); // 1100
+    compos_vec_.push_back(compos);
+
+    compos.set();
+    compos.reset(COMPOS_BIT_CAMERA);
+    qDebug() << QString::fromStdString(compos.to_string()); // 1011
+    compos_vec_.push_back(compos);
+
+    compos.set();
+    compos.reset(COMPOS_BIT_SYSTEM_VOICE);
+    compos.reset(COMPOS_BIT_DESKTOP);
+    compos.reset(COMPOS_BIT_CAMERA);
+    qDebug() << QString::fromStdString(compos.to_string()); // 1000
+    compos_vec_.push_back(compos);
+
+    compos.set();
+    compos.reset(COMPOS_BIT_SYSTEM_VOICE);
+    compos.reset(COMPOS_BIT_DESKTOP);
+    compos.reset(COMPOS_BIT_MICROPHONE);
+    qDebug() << QString::fromStdString(compos.to_string()); // 0100
+    compos_vec_.push_back(compos);
+
+    compos.set();
+    compos.reset(COMPOS_BIT_CAMERA);
+    compos.reset(COMPOS_BIT_MICROPHONE);
+    qDebug() << QString::fromStdString(compos.to_string()); // 0011
+    compos_vec_.push_back(compos);
+
+    compos.set();
+    compos.reset(COMPOS_BIT_CAMERA);
+    compos.reset(COMPOS_BIT_MICROPHONE);
+    compos.reset(COMPOS_BIT_SYSTEM_VOICE);
+    qDebug() << QString::fromStdString(compos.to_string()); // 0010
+    compos_vec_.push_back(compos);
+
+    compos_.reset();
+    compos_.set(COMPOS_BIT_CAMERA, true);
+    compos_.set(COMPOS_BIT_MICROPHONE, true);
+
+#if defined(Q_OS_WIN)
+    file_path_ = "D:/my.flv";
+#elif defined(Q_OS_LINUX)
+    file_path_ = "~/my.flv";
+#endif
+
     started_ = false;
 }
 
@@ -20,18 +70,6 @@ std::string Config::GetVideoCaptureDevice()
     return video_device_;
 }
 
-void Config::SetHasVideo(bool flag)
-{
-    QMutexLocker lock(&mutex_);
-    has_video_ = flag;
-}
-
-bool Config::HasVideo()
-{
-    QMutexLocker lock(&mutex_);
-    return has_video_;
-}
-
 void Config::SetAudioCaptureDevice(const std::string& device_name)
 {
     QMutexLocker lock(&mutex_);
@@ -44,6 +82,60 @@ std::string Config::GetAudioCaptureDevice()
     return audio_device_;
 }
 
+void Config::SetAudio2CaptureDevice(const std::string& device_name)
+{
+    QMutexLocker lock(&mutex_);
+    audio2_device_ = device_name;
+}
+
+std::string Config::GetAudio2CaptureDevice()
+{
+    QMutexLocker lock(&mutex_);
+    return audio2_device_;
+}
+
+bool Config::IsValidComposSet()
+{
+    mutex_.lock();
+    const std::bitset<COMPOS_BIT_MAX> compos = compos_;
+    mutex_.unlock();
+
+    bool ok = false;
+
+    for (auto c : compos_vec_)
+    {
+        if (compos == c)
+        {
+            ok = true;
+            break;
+        }
+    }
+
+    return ok;
+}
+
+void Config::SetCompos(int bit, bool on)
+{
+    if (bit < COMPOS_BIT_MIN || bit >= COMPOS_BIT_MAX)
+    {
+        return;
+    }
+
+    QMutexLocker lock(&mutex_);
+    compos_.set(bit, on);
+}
+
+bool Config::TestCompos(int bit)
+{
+    if (bit < COMPOS_BIT_MIN || bit >= COMPOS_BIT_MAX)
+    {
+        return false;
+    }
+
+    QMutexLocker lock(&mutex_);
+    return compos_.test(bit);
+}
+
 void Config::SetFilePath(const std::string& file_path)
 {
     QMutexLocker lock(&mutex_);
@@ -54,18 +146,6 @@ std::string Config::GetFilePath()
 {
     QMutexLocker lock(&mutex_);
     return file_path_;
-}
-
-void Config::SetHasAudio(bool flag)
-{
-    QMutexLocker lock(&mutex_);
-    has_audio_ = flag;
-}
-
-bool Config::HasAudio()
-{
-    QMutexLocker lock(&mutex_);
-    return has_audio_;
 }
 
 void Config::SetStarted(bool flag)

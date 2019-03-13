@@ -1,5 +1,6 @@
 ﻿#include "main_window.h"
 #include <QDebug>
+#include <qsystemdetection.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,17 +58,48 @@ void MainWindow::on_actionDevices_triggered()
 
 void MainWindow::OnStartStream()
 {
-    if (GLOBAL->config.HasVideo())
+#if defined(Q_OS_WIN)
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA))
     {
-        input_stream_.SetVideoCaptureDevice(GLOBAL->config.GetVideoCaptureDevice());
-        input_stream_.SetVideoCaptureCB(VideoCaptureCallback);
+        input_stream_.SetVideoCaptureDevice("dshow", GLOBAL->config.GetVideoCaptureDevice(), true);
+    }
+    else if (GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP))
+    {
+        input_stream_.SetVideoCaptureDevice("gdigrab", "desktop", false);
     }
 
-    if (GLOBAL->config.HasAudio())
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE))
     {
-        input_stream_.SetAudioCaptureDevice(GLOBAL->config.GetAudioCaptureDevice());
-        input_stream_.SetAudioCaptureCB(AudioCaptureCallback);
+        input_stream_.SetAudioCaptureDevice("dshow", GLOBAL->config.GetAudioCaptureDevice(), true);
     }
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_SYSTEM_VOICE))
+    {
+        input_stream_.SetAudio2CaptureDevice("dshow", GLOBAL->config.GetAudio2CaptureDevice(), true);
+    }
+#elif defined(Q_OS_LINUX)
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA))
+    {
+        input_stream_.SetVideoCaptureDevice("video4linux2", GLOBAL->config.GetVideoCaptureDevice(), false);
+    }
+    else if (GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP))
+    {
+        input_stream_.SetVideoCaptureDevice("x11grab", "desktop", false);
+    }
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE))
+    {
+        input_stream_.SetAudioCaptureDevice("alsa", GLOBAL->config.GetAudioCaptureDevice(), false);
+    }
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_SYSTEM_VOICE))
+    {
+        input_stream_.SetAudio2CaptureDevice("alsa", GLOBAL->config.GetAudio2CaptureDevice(), false);
+    }
+#endif
+
+    input_stream_.SetVideoCaptureCB(VideoCaptureCallback);
+    input_stream_.SetAudioCaptureCB(AudioCaptureCallback);
 
     int ret = -1;
 

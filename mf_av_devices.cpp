@@ -6,7 +6,7 @@
 #pragma comment(lib, "Mfplat.lib")
 #pragma comment(lib, "Mf.lib")
 
-int MFGetAVInputDevices(std::vector<DeviceCtx>& device_ctx_vec, REFGUID guid_value)
+int MFGetAVDevices(std::vector<DeviceCtx>& device_ctx_vec, REFGUID guid_value)
 {
     DeviceCtx name;
     HRESULT hr;

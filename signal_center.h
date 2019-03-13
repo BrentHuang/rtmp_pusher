@@ -17,6 +17,6 @@ signals:
     void StopStream();
 };
 
-#define SIGNAL_CENTER Singleton<SignalCenter>::Instance().get()
+#define SIGNAL_CENTER ((SignalCenter*) Singleton<SignalCenter>::Instance().get())
 
 #endif // SIGNAL_CENTER_H

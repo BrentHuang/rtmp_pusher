@@ -24,6 +24,6 @@ struct Global
     ~Global() {}
 };
 
-#define GLOBAL Singleton<Global>::Instance().get()
+#define GLOBAL ((Global*) Singleton<Global>::Instance().get())
 
 #endif // GLOBAL_H

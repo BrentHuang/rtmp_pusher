@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>550</width>
-    <height>359</height>
+    <width>431</width>
+    <height>323</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,34 +18,21 @@
     <rect>
      <x>20</x>
      <y>20</y>
-     <width>451</width>
-     <height>91</height>
+     <width>261</width>
+     <height>51</height>
     </rect>
    </property>
    <property name="title">
-    <string>音频设备</string>
+    <string>音频输入设备</string>
    </property>
    <widget class="QComboBox" name="comboBox_Audio">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>47</y>
-      <width>321</width>
+      <x>9</x>
+      <y>24</y>
+      <width>241</width>
       <height>22</height>
      </rect>
-    </property>
-   </widget>
-   <widget class="QCheckBox" name="checkBox_Audio">
-    <property name="geometry">
-     <rect>
-      <x>350</x>
-      <y>50</y>
-      <width>73</width>
-      <height>18</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>音频</string>
     </property>
    </widget>
   </widget>
@@ -53,43 +40,40 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>130</y>
-     <width>451</width>
+     <y>80</y>
+     <width>261</width>
      <height>91</height>
     </rect>
    </property>
    <property name="title">
-    <string>视频设备</string>
+    <string>视频采集设备</string>
    </property>
    <widget class="QComboBox" name="comboBox_Video">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>46</y>
-      <width>321</width>
+      <x>9</x>
+      <y>24</y>
+      <width>241</width>
       <height>22</height>
      </rect>
     </property>
    </widget>
-   <widget class="QCheckBox" name="checkBox_Video">
+   <widget class="QComboBox" name="comboBox_VideoProp">
     <property name="geometry">
      <rect>
-      <x>350</x>
-      <y>49</y>
-      <width>73</width>
-      <height>18</height>
+      <x>10</x>
+      <y>60</y>
+      <width>241</width>
+      <height>22</height>
      </rect>
-    </property>
-    <property name="text">
-     <string>视频</string>
     </property>
    </widget>
   </widget>
   <widget class="QPushButton" name="pushButton_Start">
    <property name="geometry">
     <rect>
-     <x>350</x>
-     <y>320</y>
+     <x>240</x>
+     <y>290</y>
      <width>80</width>
      <height>20</height>
     </rect>
@@ -101,8 +85,8 @@
   <widget class="QPushButton" name="pushButton_Stop">
    <property name="geometry">
     <rect>
-     <x>450</x>
-     <y>320</y>
+     <x>340</x>
+     <y>290</y>
      <width>80</width>
      <height>20</height>
     </rect>
@@ -115,7 +99,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>250</y>
+     <y>248</y>
      <width>66</width>
      <height>12</height>
     </rect>
@@ -128,8 +112,8 @@
    <property name="geometry">
     <rect>
      <x>80</x>
-     <y>243</y>
-     <width>256</width>
+     <y>241</y>
+     <width>201</width>
      <height>31</height>
     </rect>
    </property>
@@ -137,8 +121,8 @@
   <widget class="QPushButton" name="pushButton_Dir">
    <property name="geometry">
     <rect>
-     <x>350</x>
-     <y>248</y>
+     <x>290</x>
+     <y>246</y>
      <width>80</width>
      <height>20</height>
     </rect>
@@ -146,6 +130,94 @@
    <property name="text">
     <string>选择</string>
    </property>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_4">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>40</y>
+     <width>111</width>
+     <height>171</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>音视频采集源</string>
+   </property>
+   <widget class="QCheckBox" name="checkBox_Audio">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>30</y>
+      <width>73</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>麦克风</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_AudioSystem">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>60</y>
+      <width>73</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>系统声音</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_VideoDesktop">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>140</y>
+      <width>73</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>系统桌面</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_Video">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>110</y>
+      <width>73</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>摄像头</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_3">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>176</y>
+     <width>261</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>扬声器</string>
+   </property>
+   <widget class="QComboBox" name="comboBox_AudioSpeaker">
+    <property name="geometry">
+     <rect>
+      <x>9</x>
+      <y>24</y>
+      <width>241</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
  </widget>
  <resources/>
