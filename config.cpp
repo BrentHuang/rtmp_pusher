@@ -45,6 +45,12 @@ Config::Config() : mutex_(), video_device_(), audio_device_(),
 //    qDebug() << QString::fromStdString(compos.to_string()); // 0010
     compos_vec_.push_back(compos);
 
+    compos.set();
+    compos.reset(COMPOS_BIT_CAMERA);
+    compos.reset(COMPOS_BIT_SYSTEM_VOICE);
+//    qDebug() << QString::fromStdString(compos.to_string()); // 1010
+    compos_vec_.push_back(compos);
+
     compos_.reset();
     compos_.set(COMPOS_BIT_CAMERA, true);
     compos_.set(COMPOS_BIT_MICROPHONE, true);
