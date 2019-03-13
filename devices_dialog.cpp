@@ -19,6 +19,7 @@ extern "C" {
 #include "global.h"
 #include "signal_center.h"
 
+#if defined(Q_OS_LINUX)
 #include <alsa/asoundlib.h>
 
 #define error printf
@@ -149,6 +150,7 @@ next_card:
         }
     }
 }
+#endif
 
 DevicesDialog::DevicesDialog(QWidget* parent) :
     QDialog(parent),

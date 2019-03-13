@@ -1,9 +1,10 @@
-#include "main_window.h"
+﻿#include "main_window.h"
 #include <QApplication>
 
 #ifdef __cplusplus
 extern "C" {
 #include <libavdevice/avdevice.h>
+#include <libavformat/avformat.h>
 #endif
 #if __cplusplus
 }
