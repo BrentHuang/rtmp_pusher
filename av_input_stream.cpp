@@ -15,11 +15,11 @@ AVInputStream::AVInputStream() : video_device_(), audio_device_(), write_file_mu
     video_cb_ = nullptr;
     audio_cb_ = nullptr;
 
-    input_fmt_ = nullptr;
-
+    video_input_fmt_ = nullptr;
     video_fmt_ctx_ = nullptr;
     video_index_ = -1;
 
+    audio_input_fmt_ = nullptr;
     audio_fmt_ctx_ = nullptr;
     audio_index_ = -1;
 
@@ -64,19 +64,6 @@ int AVInputStream::Open()
         return -1;
     }
 
-    // 打开Directshow设备前需要调用FFmpeg的avdevice_register_all函数，否则下面返回失败
-#if defined(Q_OS_WIN)
-    input_fmt_ = av_find_input_format("dshow");
-#elif defined(Q_OS_LINUX)
-    input_fmt_ = av_find_input_format("video4linux2");
-#endif
-
-    if (nullptr == input_fmt_)
-    {
-        qDebug() << "you may missed call 'avdevice_register_all'";
-        return -1;
-    }
-
     AVDictionary* opts = nullptr;
 
     // if not setting rtbufsize, error messages will be shown in cmd, but you can still watch or record the stream
@@ -91,8 +78,19 @@ int AVInputStream::Open()
         const std::string device_name = video_device_;
 #endif
 
+#if defined(Q_OS_WIN)
+        video_input_fmt_ = av_find_input_format("dshow");
+#elif defined(Q_OS_LINUX)
+        video_input_fmt_ = av_find_input_format("video4linux2");
+#endif
+        if (nullptr == video_input_fmt_)
+        {
+            qDebug() << "you may missed call 'avdevice_register_all'";
+            return -1;
+        }
+
         // 打开设备
-        int ret = avformat_open_input(&video_fmt_ctx_, device_name.c_str(), input_fmt_, &opts);
+        int ret = avformat_open_input(&video_fmt_ctx_, device_name.c_str(), video_input_fmt_, &opts);
         if (ret != 0)
         {
             qDebug() << "can not open input video stream";
@@ -143,8 +141,19 @@ int AVInputStream::Open()
         const std::string device_name = audio_device_;
 #endif
 
+#if defined(Q_OS_WIN)
+        audio_input_fmt_ = av_find_input_format("dshow");
+#elif defined(Q_OS_LINUX)
+        audio_input_fmt_ = av_find_input_format("alsa");
+#endif
+        if (nullptr == audio_input_fmt_)
+        {
+            qDebug() << "you may missed call 'avdevice_register_all'";
+            return -1;
+        }
+
         // Set own audio device's name
-        int ret = avformat_open_input(&audio_fmt_ctx_, device_name.c_str(), input_fmt_, &opts);
+        int ret = avformat_open_input(&audio_fmt_ctx_, device_name.c_str(), audio_input_fmt_, &opts);
         if (ret != 0)
         {
 //            ATLTRACE("Couldn't open input audio stream.（无法打开输入流）\n");
@@ -239,7 +248,8 @@ void AVInputStream::Close()
     audio_fmt_ctx_ = nullptr;
     audio_index_ = -1;
 
-    input_fmt_ = nullptr;
+    video_input_fmt_ = nullptr;
+    audio_input_fmt_ = nullptr;
     start_time_ = 0;
 }
 

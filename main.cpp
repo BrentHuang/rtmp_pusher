@@ -27,6 +27,25 @@ int main(int argc, char* argv[])
 //    av_log_set_callback(av_log_callback);
     avdevice_register_all();
 
+    // 遍历支持的封装格式
+    AVInputFormat* input_format = av_iformat_next(nullptr);
+    puts("-------------------------------Input--------------------------------");
+    while (input_format != nullptr)
+    {
+        printf("%s ", input_format->name);
+        input_format = input_format->next;
+    }
+    puts("\n--------------------------------------------------------------------");
+
+    AVOutputFormat* output_format = av_oformat_next(nullptr);
+    puts("-------------------------------Output-------------------------------");
+    while (output_format != nullptr)
+    {
+        printf("%s ", output_format->name);
+        output_format = output_format->next;
+    }
+    puts("\n--------------------------------------------------------------------");
+
     MainWindow w;
     w.show();
 

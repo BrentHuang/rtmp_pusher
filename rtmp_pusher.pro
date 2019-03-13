@@ -61,7 +61,8 @@ unix:!macx {
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lswscale \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lswresample \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/x264/lib -lx264 \
-        -L$${THIRD_PARTY_INSTALL_PREFIX}/fdk_aac/lib -lfdk-aac
+        -L$${THIRD_PARTY_INSTALL_PREFIX}/fdk_aac/lib -lfdk-aac \
+        -lasound
 }
 
 SOURCES += \

@@ -51,11 +51,11 @@ protected:
     VideoCaptureCB video_cb_;
     AudioCaptureCB audio_cb_;
 
-    AVInputFormat* input_fmt_;
-
+    AVInputFormat* video_input_fmt_;
     AVFormatContext* video_fmt_ctx_;
     int video_index_;
 
+    AVInputFormat* audio_input_fmt_;
     AVFormatContext* audio_fmt_ctx_;
     int audio_index_;
 
