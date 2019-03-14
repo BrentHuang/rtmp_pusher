@@ -268,22 +268,22 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
 
         camera->load();
 
-        // 返回支持的取景器分辨率列表（一定要打开摄像头)
-        for (auto resolution : camera->supportedViewfinderResolutions())
-        {
-            //dosomething about the resolution
-            qDebug() << resolution;
-        }
+        // 返回支持的取景器分辨率列表
+//        for (auto resolution : camera->supportedViewfinderResolutions())
+//        {
+//            //dosomething about the resolution
+//            qDebug() << resolution;
+//        }
 
-        for (auto frame_rate_range : camera->supportedViewfinderFrameRateRanges())
-        {
-            qDebug() << frame_rate_range.minimumFrameRate << frame_rate_range.maximumFrameRate;
-        }
+//        for (auto frame_rate_range : camera->supportedViewfinderFrameRateRanges())
+//        {
+//            qDebug() << frame_rate_range.minimumFrameRate << frame_rate_range.maximumFrameRate;
+//        }
 
-        for (auto pixel_format : camera->supportedViewfinderPixelFormats())
-        {
-            qDebug() << pixel_format;
-        }
+//        for (auto pixel_format : camera->supportedViewfinderPixelFormats())
+//        {
+//            qDebug() << pixel_format;
+//        }
 
         for (auto vf_settings : camera->supportedViewfinderSettings())
         {
@@ -399,7 +399,7 @@ void DevicesDialog::on_comboBox_Video_currentIndexChanged(const QString& arg1)
 
                 QString item = QString("%1x%2 %3 %4 %5").arg(vf_settings.resolution().width())
                                .arg(vf_settings.resolution().height())
-                               .arg(vf_settings.minimumFrameRate())
+                               .arg(vf_settings.minimumFrameRate()) // TODO 帧率只显示15 20 25 30这几种
                                .arg(vf_settings.maximumFrameRate())
                                .arg(pix_fmt_str);
                 ui->comboBox_VideoProp->addItem(item);
@@ -411,7 +411,11 @@ void DevicesDialog::on_comboBox_Video_currentIndexChanged(const QString& arg1)
         }
     }
 
+#if defined(Q_OS_WIN)
+    GLOBAL->config.SetVideoCaptureDevice(ui->comboBox_Video->currentText().toStdString());
+#elif defined(Q_OS_LINUX)
     GLOBAL->config.SetVideoCaptureDevice(ui->comboBox_Video->currentData().toString().toStdString());
+#endif
 }
 
 void DevicesDialog::on_comboBox_Audio_currentIndexChanged(const QString& arg1)

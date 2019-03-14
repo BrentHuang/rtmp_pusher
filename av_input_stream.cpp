@@ -68,7 +68,7 @@ void AVInputStream::SetAudioCaptureCB(AudioCaptureCB cb)
     audio_cb_ = cb;
 }
 
-int AVInputStream::Open()
+int AVInputStream::Open(int width, int height, int frame_rate, AVPixelFormat pix_fmt, int sample_rate, AVSampleFormat sample_fmt, int channels)
 {
     if (!video_fmt_name_.empty() && !video_device_name_.empty())
     {
@@ -288,31 +288,62 @@ int AVInputStream::GetVideoInfo(int& width, int& height, int& frame_rate, AVPixe
         return -1;
     }
 
-    width = video_fmt_ctx_->streams[video_index_]->codec->width;
-    height = video_fmt_ctx_->streams[video_index_]->codec->height;
-
     AVStream* stream = video_fmt_ctx_->streams[video_index_];
+    width = stream->codec->width;
+    height = stream->codec->height;
 
-    if (stream->r_frame_rate.den > 0)
-    {
-        frame_rate = stream->r_frame_rate.num / stream->r_frame_rate.den;
-    }
-    else if (stream->codec->framerate.den > 0)
+    if (stream->codec->framerate.den > 0)
     {
         frame_rate = stream->codec->framerate.num / stream->codec->framerate.den;
     }
-    else
+    else if (stream->avg_frame_rate.den > 0)
     {
         frame_rate = stream->avg_frame_rate.num / stream->avg_frame_rate.den;
+    }
+    else if (stream->r_frame_rate.den > 0)
+    {
+        frame_rate = stream->r_frame_rate.num / stream->r_frame_rate.den;
+    }
+    else
+    {
+        frame_rate = 0;
     }
 
     pix_fmt = stream->codec->pix_fmt;
 
-    qDebug() << width << height << frame_rate << pix_fmt;
+    QString pix_fmt_str;
+    switch (pix_fmt)
+    {
+        case AV_PIX_FMT_BGRA:
+        {
+            pix_fmt_str = "AV_PIX_FMT_BGRA";
+        }
+        break;
+
+        case AV_PIX_FMT_YUYV422:
+        {
+            pix_fmt_str = "AV_PIX_FMT_YUYV422";
+        }
+        break;
+
+        case AV_PIX_FMT_YUVJ422P:
+        {
+            pix_fmt_str = "AV_PIX_FMT_YUVJ422P";
+        }
+        break;
+
+        default:
+        {
+            pix_fmt_str =  QString("%1").arg((int) pix_fmt);
+        }
+        break;
+    }
+
+    qDebug() << width << "x" << height << frame_rate << pix_fmt_str;
     return 0;
 }
 
-int AVInputStream::GetAudioInfo(AVSampleFormat& sample_fmt, int& sample_rate, int& channels)
+int AVInputStream::GetAudioInfo(int& sample_rate, AVSampleFormat& sample_fmt, int& channels)
 {
     if (nullptr == audio_fmt_ctx_ || -1 == audio_index_)
     {
@@ -324,7 +355,23 @@ int AVInputStream::GetAudioInfo(AVSampleFormat& sample_fmt, int& sample_rate, in
     sample_rate = stream->codec->sample_rate;
     channels = stream->codec->channels;
 
-    qDebug() << sample_fmt << sample_rate << channels;
+    QString sample_fmt_str;
+    switch (sample_fmt)
+    {
+        case AV_SAMPLE_FMT_S16:
+        {
+            sample_fmt_str = "AV_SAMPLE_FMT_S16";
+        }
+        break;
+
+        default:
+        {
+            sample_fmt_str = QString("%1").arg((int) sample_fmt);
+        }
+        break;
+    }
+
+    qDebug() << sample_rate << sample_fmt_str << channels;
     return 0;
 }
 

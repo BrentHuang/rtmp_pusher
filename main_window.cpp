@@ -105,27 +105,55 @@ void MainWindow::OnStartStream()
 
     do
     {
-        if (input_stream_.Open() != 0)
+        if (input_stream_.Open(0, 0, 0, (AVPixelFormat) 0, 0, (AVSampleFormat) 0, 0) != 0) // TODO 参数根据用户选择来设置
         {
             break;
         }
 
         int cx, cy, fps;
-        AVPixelFormat pixel_fmt;
+        AVPixelFormat pix_fmt;
 
-        if (0 == input_stream_.GetVideoInfo(cx, cy, fps, pixel_fmt))
+        if (0 == input_stream_.GetVideoInfo(cx, cy, fps, pix_fmt))
         {
-            const int bit_rate = (int) (1200000.0 * cy / 1080); // 基本所有摄像头都支持的分辨率："320*240", "640*480", "1280*720"
+            const int bit_rate = (int) (1000000.0 * cy / 1080); // 基本所有摄像头都支持的分辨率："320*240", "640*480", "1280*720"
             qDebug() << "output video bit rate:" << bit_rate;
-            output_stream_.SetVideoCodecProp(AV_CODEC_ID_H264, fps, bit_rate, fps * 2, cx, cy); // gop_size=2*fps，视频比特率可以按比例调：TODO
+
+            // 15 20 25 30 从这四种里面选择一个最接近的
+            if (0 == fps)
+            {
+                fps = 20;
+            }
+            else
+            {
+                const int elem_count = 4;
+                int fps_array[elem_count] = { 15, 20, 25, 30 };
+                int fps_delta_array[elem_count] = { abs(fps - 15), abs(fps - 20), abs(fps - 25), abs(fps - 30) };
+
+                int min_delta = fps_delta_array[0];
+                int min_idx = 0;
+
+                for (int i = 1; i < sizeof(fps_delta_array) / sizeof(fps_delta_array[0]); ++i)
+                {
+                    if (fps_delta_array[i] < min_delta)
+                    {
+                        min_delta = fps_delta_array[i];
+                        min_idx = i;
+                    }
+                }
+
+                fps = fps_array[min_idx];
+            }
+
+            output_stream_.SetVideoCodecProp(AV_CODEC_ID_H264, fps, bit_rate, fps * 2, cx, cy); // gop_size=2*fps，视频比特率按比例调
         }
 
-        AVSampleFormat sample_fmt;
         int sample_rate, channels;
+        AVSampleFormat sample_fmt;
 
-        if (0 == input_stream_.GetAudioInfo(sample_fmt, sample_rate, channels))
+        if (0 == input_stream_.GetAudioInfo(sample_rate, sample_fmt, channels))
         {
-            output_stream_.SetAudioCodecProp(AV_CODEC_ID_AAC, sample_rate, channels, 32000); // 音频比特率：TODO
+            const int bit_rate = 32000 * channels;
+            output_stream_.SetAudioCodecProp(AV_CODEC_ID_AAC, sample_rate, channels, bit_rate); // 音频比特率：单声道32k，双声道64k，音乐128k
         }
 
         if (output_stream_.Open(GLOBAL->config.GetFilePath()) != 0)

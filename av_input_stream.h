@@ -30,13 +30,13 @@ public:
     void SetVideoCaptureCB(VideoCaptureCB cb);
     void SetAudioCaptureCB(AudioCaptureCB cb);
 
-    int Open();
+    int Open(int width, int height, int frame_rate, AVPixelFormat pix_fmt, int sample_rate, AVSampleFormat sample_fmt, int channels);
     void Close();
 
     int StartCapture();
 
     int GetVideoInfo(int& width, int& height, int& frame_rate, AVPixelFormat& pix_fmt);
-    int GetAudioInfo(AVSampleFormat& sample_fmt, int& sample_rate, int& channels);
+    int GetAudioInfo(int& sample_rate, AVSampleFormat& sample_fmt, int& channels);
 
 protected:
     static int CaptureVideoThreadFunc(void* args);

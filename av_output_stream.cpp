@@ -57,7 +57,7 @@ void AVOutputStream::SetVideoCodecProp(AVCodecID codec_id, int frame_rate, int b
     video_codec_id_ = codec_id;
     width_ = width;
     height_ = height;
-    frame_rate_ = ((frame_rate == 0) ? 10 : frame_rate);
+    frame_rate_ = frame_rate;
     video_bit_rate_ = bit_rate;
     gop_size_ = gop_size;
 }
