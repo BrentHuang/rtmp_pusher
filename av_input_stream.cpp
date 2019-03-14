@@ -70,6 +70,7 @@ void AVInputStream::SetAudioCaptureCB(AudioCaptureCB cb)
 
 int AVInputStream::Open(int width, int height, int frame_rate, AVPixelFormat pix_fmt, int sample_rate, AVSampleFormat sample_fmt, int channels)
 {
+    // 采集的时候，frame_rate选择指定分辨率下最大的那个，pix_fmt选择支持的一种，sample_rate选择44100，sample_fmt选择AV_SAMPLE_FMT_S16，channels选择2
     if (!video_fmt_name_.empty() && !video_device_name_.empty())
     {
         std::string device_name = video_device_name_;
