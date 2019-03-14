@@ -6,6 +6,7 @@
 extern "C" {
 #endif
 #include <libavutil/time.h>
+#include <libavdevice/avdevice.h>
 #ifdef __cplusplus
 }
 #endif
@@ -70,16 +71,9 @@ void AVInputStream::SetAudioCaptureCB(AudioCaptureCB cb)
 
 int AVInputStream::Open(int width, int height, int frame_rate, AVPixelFormat pix_fmt, int sample_rate, AVSampleFormat sample_fmt, int channels)
 {
-    // 采集的时候，frame_rate选择指定分辨率下最大的那个，pix_fmt选择支持的一种，sample_rate选择44100，sample_fmt选择AV_SAMPLE_FMT_S16，channels选择2
+    // 采集的时候，frame_rate选择指定分辨率下最大的那个，pix_fmt选择支持的一种，sample_rate选择44100，sample_fmt选择支持的一种，channels选择2
     if (!video_fmt_name_.empty() && !video_device_name_.empty())
     {
-        std::string device_name = video_device_name_;
-
-        if (video_prefix_)
-        {
-            device_name = "video=" + video_device_name_;
-        }
-
         video_input_fmt_ = av_find_input_format(video_fmt_name_.c_str());
         if (nullptr == video_input_fmt_)
         {
@@ -96,12 +90,31 @@ int AVInputStream::Open(int width, int height, int frame_rate, AVPixelFormat pix
 //        av_dict_set(&video_device_opts, "framerate", "15", 0);
 
         // 打开设备
+        const std::string device_name = video_prefix_ ? ("video=" + video_device_name_) : video_device_name_;
+
         int ret = avformat_open_input(&video_fmt_ctx_, device_name.c_str(), video_input_fmt_, &video_device_opts);
         if (ret != 0)
         {
             qDebug() << "can not open input video stream";
             return -1;
         }
+
+#if defined(Q_OS_LINUX)
+        AVDeviceCapabilitiesQuery* caps = nullptr;
+        AVOptionRanges* ranges;
+
+        if (avdevice_capabilities_create(&caps, video_fmt_ctx_, nullptr) >= 0)
+        {
+            av_opt_query_ranges(&ranges, caps, "codec", AV_OPT_MULTI_COMPONENT_RANGE);
+            // pick codec here and set it
+            av_opt_set(caps, "codec", AV_CODEC_ID_RAWVIDEO, 0);
+            av_opt_query_ranges(&ranges, caps, "pixel_format", AV_OPT_MULTI_COMPONENT_RANGE);
+            // pick format here and set it
+            av_opt_set(caps, "pixel_format", AV_PIX_FMT_YUV420P, 0);
+
+            avdevice_capabilities_free(&caps, video_fmt_ctx_);
+        }
+#endif
 
         // input video initialize 获取流的信息，得到视频流或音频流的索引号，之后会频繁用到这个索引号来定位视频和音频的Stream信息
         ret = avformat_find_stream_info(video_fmt_ctx_, nullptr);
@@ -141,13 +154,6 @@ int AVInputStream::Open(int width, int height, int frame_rate, AVPixelFormat pix
 
     if (!audio_fmt_name_.empty() && !audio_device_name_.empty())
     {
-        std::string device_name = audio_device_name_;
-
-        if (audio_prefix_)
-        {
-            device_name = "audio=" + audio_device_name_;
-        }
-
         audio_input_fmt_ = av_find_input_format(audio_fmt_name_.c_str());
         if (nullptr == audio_input_fmt_)
         {
@@ -156,6 +162,10 @@ int AVInputStream::Open(int width, int height, int frame_rate, AVPixelFormat pix
         }
 
         AVDictionary* audio_device_opts = nullptr;
+//        av_dict_set(&audio_device_opts, "sample_rate", "44100", 0);
+//        av_dict_set(&audio_device_opts, "channels", "2", 0);
+
+        const std::string device_name = audio_prefix_ ? ("audio=" + audio_device_name_) : audio_device_name_;
 
         int ret = avformat_open_input(&audio_fmt_ctx_, device_name.c_str(), audio_input_fmt_, &audio_device_opts);
         if (ret != 0)

@@ -121,7 +121,7 @@ void MainWindow::OnStartStream()
             // 15 20 25 30 从这四种里面选择一个最接近的
             if (0 == fps)
             {
-                fps = 20;
+                fps = 30;
             }
             else
             {
