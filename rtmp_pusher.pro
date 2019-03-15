@@ -32,6 +32,7 @@ win32 {
     THIRD_PARTY_INSTALL_PREFIX = D:/third_party
 
     INCLUDEPATH += $${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win32-dev/include
+
     LIBS += -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win32-dev/lib -lavcodec \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win32-dev/lib -lavformat \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win32-dev/lib -lavutil \
@@ -55,6 +56,7 @@ unix:!macx {
     }
 
     INCLUDEPATH += $${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/include
+
     LIBS += -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lavcodec \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lavformat \
         -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg/lib -lavutil \
@@ -78,19 +80,7 @@ SOURCES += \
     signal_center.cpp \
     video_capture.cpp \
     audio_capture.cpp \
-    capture_device.cpp \
-    audio_capture.cpp \
-    av_input_stream.cpp \
-    av_output_stream.cpp \
-    capture_device.cpp \
-    config.cpp \
-    devices_dialog.cpp \
-    ds_av_devices.cpp \
-    main.cpp \
-    main_window.cpp \
-    mf_av_devices.cpp \
-    signal_center.cpp \
-    video_capture.cpp
+    capture_device.cpp
 
 HEADERS += \
         main_window.h \
@@ -103,20 +93,7 @@ HEADERS += \
     global.h \
     video_capture.h \
     audio_capture.h \
-    capture_device.h \
-    audio_capture.h \
-    av_input_stream.h \
-    av_output_stream.h \
-    capture_device.h \
-    config.h \
-    devices_dialog.h \
-    ds_av_devices.h \
-    global.h \
-    main_window.h \
-    mf_av_devices.h \
-    signal_center.h \
-    singleton.h \
-    video_capture.h
+    capture_device.h
 
 FORMS += \
         main_window.ui \

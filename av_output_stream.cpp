@@ -1,4 +1,4 @@
-﻿#include "av_output_stream.h"
+#include "av_output_stream.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,4 +1,4 @@
-﻿#ifndef DS_AV_DEVICES_H
+#ifndef DS_AV_DEVICES_H
 #define DS_AV_DEVICES_H
 
 #include <qsystemdetection.h>

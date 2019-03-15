@@ -1,4 +1,4 @@
-﻿#include "devices_dialog.h"
+#include "devices_dialog.h"
 #include <QDebug>
 #include <QOperatingSystemVersion>
 #include <QFileDialog>

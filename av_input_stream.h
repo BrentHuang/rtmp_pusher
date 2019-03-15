@@ -1,4 +1,4 @@
-﻿#ifndef AV_INPUT_STREAM_H
+#ifndef AV_INPUT_STREAM_H
 #define AV_INPUT_STREAM_H
 
 #include <QMutex>
