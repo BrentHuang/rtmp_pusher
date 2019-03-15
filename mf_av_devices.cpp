@@ -1,4 +1,4 @@
-#include "mf_av_devices.h"
+﻿#include "mf_av_devices.h"
 
 #if defined(Q_OS_WIN)
 #include <mfapi.h>

@@ -1,4 +1,4 @@
-#include "capture_device.h"
+﻿#include "capture_device.h"
 
 CaptureDevice::CaptureDevice() : fmt_name_(), device_name_()
 {

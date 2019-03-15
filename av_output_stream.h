@@ -1,4 +1,4 @@
-#ifndef AV_OUTPUT_STREAM_H
+﻿#ifndef AV_OUTPUT_STREAM_H
 #define AV_OUTPUT_STREAM_H
 
 #include <string>

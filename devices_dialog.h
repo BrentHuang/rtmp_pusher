@@ -1,4 +1,4 @@
-#ifndef DEVICES_DIALOG_H
+﻿#ifndef DEVICES_DIALOG_H
 #define DEVICES_DIALOG_H
 
 #include <QDialog>

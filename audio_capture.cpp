@@ -1,4 +1,4 @@
-#include "audio_capture.h"
+﻿#include "audio_capture.h"
 
 AudioCapture::AudioCapture()
 {

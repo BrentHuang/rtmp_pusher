@@ -1,4 +1,4 @@
-#include "ds_av_devices.h"
+﻿#include "ds_av_devices.h"
 
 #if defined(Q_OS_WIN)
 #pragma comment(lib, "Strmiids.lib")

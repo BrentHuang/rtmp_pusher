@@ -1,4 +1,4 @@
-#ifndef VIDEO_CAPTURE_H
+﻿#ifndef VIDEO_CAPTURE_H
 #define VIDEO_CAPTURE_H
 
 #include "capture_device.h"

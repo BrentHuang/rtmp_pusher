@@ -1,4 +1,4 @@
-#include "av_input_stream.h"
+﻿#include "av_input_stream.h"
 #include <QDebug>
 #include <qsystemdetection.h>
 
