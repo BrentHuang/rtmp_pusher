@@ -1,5 +1,10 @@
 ﻿#include "main_window.h"
 #include <QApplication>
+#include <qsystemdetection.h>
+
+#if defined(Q_OS_WIN)
+#include <vld.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {

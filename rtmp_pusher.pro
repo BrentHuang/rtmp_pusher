@@ -31,15 +31,16 @@ QMAKE_LFLAGS_RELEASE = $$QMAKE_LFLAGS_RELEASE_WITH_DEBUGINFO
 win32 {
     THIRD_PARTY_INSTALL_PREFIX = D:/third_party
 
-    INCLUDEPATH += $${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/include
-#        $${THIRD_PARTY_INSTALL_PREFIX}/libdshowcapture/include
-    LIBS += -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavcodec \
-        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavformat \
-        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavutil \
-        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lavdevice \
-        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lswscale \
-        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win64-dev/lib -lswresample
-#        -L$${THIRD_PARTY_INSTALL_PREFIX}/libdshowcapture/lib -llibdshowcapture
+    INCLUDEPATH += $${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win32-dev/include
+    LIBS += -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win32-dev/lib -lavcodec \
+        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win32-dev/lib -lavformat \
+        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win32-dev/lib -lavutil \
+        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win32-dev/lib -lavdevice \
+        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win32-dev/lib -lswscale \
+        -L$${THIRD_PARTY_INSTALL_PREFIX}/ffmpeg-4.1.1-win32-dev/lib -lswresample
+
+    INCLUDEPATH += "C:/Program Files (x86)/Visual Leak Detector/include"
+    LIBS += -L"C:/Program Files (x86)/Visual Leak Detector/lib/Win32" -lvld
 }
 
 macx {
@@ -74,7 +75,22 @@ SOURCES += \
     av_output_stream.cpp \
     devices_dialog.cpp \
     config.cpp \
-    signal_center.cpp
+    signal_center.cpp \
+    video_capture.cpp \
+    audio_capture.cpp \
+    capture_device.cpp \
+    audio_capture.cpp \
+    av_input_stream.cpp \
+    av_output_stream.cpp \
+    capture_device.cpp \
+    config.cpp \
+    devices_dialog.cpp \
+    ds_av_devices.cpp \
+    main.cpp \
+    main_window.cpp \
+    mf_av_devices.cpp \
+    signal_center.cpp \
+    video_capture.cpp
 
 HEADERS += \
         main_window.h \
@@ -84,7 +100,23 @@ HEADERS += \
     config.h \
     signal_center.h \
     singleton.h \
-    global.h
+    global.h \
+    video_capture.h \
+    audio_capture.h \
+    capture_device.h \
+    audio_capture.h \
+    av_input_stream.h \
+    av_output_stream.h \
+    capture_device.h \
+    config.h \
+    devices_dialog.h \
+    ds_av_devices.h \
+    global.h \
+    main_window.h \
+    mf_av_devices.h \
+    signal_center.h \
+    singleton.h \
+    video_capture.h
 
 FORMS += \
         main_window.ui \

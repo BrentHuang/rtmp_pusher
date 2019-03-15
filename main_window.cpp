@@ -107,6 +107,7 @@ void MainWindow::OnStartStream()
     {
         if (input_stream_.Open(0, 0, 0, (AVPixelFormat) 0, 0, (AVSampleFormat) 0, 0) != 0) // TODO 参数根据用户选择来设置
         {
+            qDebug() << "failed to open input stream";
             break;
         }
 
@@ -158,11 +159,13 @@ void MainWindow::OnStartStream()
 
         if (output_stream_.Open(GLOBAL->config.GetFilePath()) != 0)
         {
+            qDebug() << "failed to open output stream";
             break;
         }
 
         if (input_stream_.StartCapture() != 0)
         {
+            qDebug() << "failed to start capture";
             break;
         }
 
