@@ -1,6 +1,14 @@
 #include "video_capture.h"
 #include <QDebug>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <libavdevice/avdevice.h>
+#ifdef __cplusplus
+}
+#endif
+
 VideoCapture::VideoCapture()
 {
     width_ = 0;
@@ -113,16 +121,16 @@ int VideoCapture::Open()
     AVDeviceCapabilitiesQuery* caps = nullptr;
     AVOptionRanges* ranges;
 
-    if (avdevice_capabilities_create(&caps, video_fmt_ctx_, nullptr) >= 0)
+    if (avdevice_capabilities_create(&caps, fmt_ctx_, nullptr) >= 0)
     {
         av_opt_query_ranges(&ranges, caps, "codec", AV_OPT_MULTI_COMPONENT_RANGE);
         // pick codec here and set it
-        av_opt_set(caps, "codec", AV_CODEC_ID_RAWVIDEO, 0);
+//        av_opt_set(caps, "codec", AV_CODEC_ID_RAWVIDEO, 0);
         av_opt_query_ranges(&ranges, caps, "pixel_format", AV_OPT_MULTI_COMPONENT_RANGE);
         // pick format here and set it
-        av_opt_set(caps, "pixel_format", AV_PIX_FMT_YUV420P, 0);
+//        av_opt_set(caps, "pixel_format", AV_PIX_FMT_YUV420P, 0);
 
-        avdevice_capabilities_free(&caps, video_fmt_ctx_);
+        avdevice_capabilities_free(&caps, fmt_ctx_);
     }
 #endif
 
