@@ -1,4 +1,4 @@
-﻿#ifndef SIGNAL_CENTER_H
+#ifndef SIGNAL_CENTER_H
 #define SIGNAL_CENTER_H
 
 #include <QObject>

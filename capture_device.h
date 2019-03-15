@@ -1,4 +1,4 @@
-﻿#ifndef CAPTURE_DEVICE_H
+#ifndef CAPTURE_DEVICE_H
 #define CAPTURE_DEVICE_H
 
 #include <string>

@@ -1,4 +1,4 @@
-﻿#include "signal_center.h"
+#include "signal_center.h"
 
 SignalCenter::SignalCenter()
 {
