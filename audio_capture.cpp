@@ -1,4 +1,14 @@
 #include "audio_capture.h"
+#include <QDebug>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <libavdevice/avdevice.h>
+#include <libavutil/time.h>
+#ifdef __cplusplus
+}
+#endif
 
 AudioCapture::AudioCapture()
 {
@@ -10,8 +20,53 @@ AudioCapture::~AudioCapture()
 {
 }
 
-void AudioCapture::SetCaptureOpts(int sample_rate, int channels)
+void AudioCapture::SetDeviceOpts(int sample_rate, int channels)
 {
     sample_rate_ = sample_rate;
     channels_ = channels;
+}
+
+void AudioCapture::SetCaptureCB(AudioCaptureCB cb)
+{
+    capture_cb_ = cb;
+}
+
+int AudioCapture::GetAudioOpts(int& sample_rate, AVSampleFormat& sample_fmt, int& channels)
+{
+    if (nullptr == fmt_ctx_ || -1 == stream_idx_)
+    {
+        return -1;
+    }
+
+    AVStream* stream = fmt_ctx_->streams[stream_idx_];
+    sample_fmt = stream->codec->sample_fmt;
+    sample_rate = stream->codec->sample_rate;
+    channels = stream->codec->channels;
+
+    QString sample_fmt_str;
+    switch (sample_fmt)
+    {
+        case AV_SAMPLE_FMT_S16:
+        {
+            sample_fmt_str = "AV_SAMPLE_FMT_S16";
+        }
+        break;
+
+        default:
+        {
+            sample_fmt_str = QString("%1").arg((int) sample_fmt);
+        }
+        break;
+    }
+
+    qDebug() << sample_rate << sample_fmt_str << channels;
+    return 0;
+}
+
+void AudioCapture::OnFrameReady(AVStream* stream, AVFrame* frame, int64_t timestamp)
+{
+    if (capture_cb_ != nullptr)
+    {
+        capture_cb_(stream, frame, timestamp);
+    }
 }

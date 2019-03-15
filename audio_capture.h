@@ -11,7 +11,12 @@ public:
     AudioCapture();
     ~AudioCapture();
 
-    void SetCaptureOpts(int sample_rate, int channels);
+    void SetDeviceOpts(int sample_rate, int channels);
+    void SetCaptureCB(AudioCaptureCB cb);
+    int GetAudioOpts(int& sample_rate, AVSampleFormat& sample_fmt, int& channels);
+
+private:
+    void OnFrameReady(AVStream* stream, AVFrame* frame, int64_t timestamp) override;
 
 private:
     int sample_rate_;

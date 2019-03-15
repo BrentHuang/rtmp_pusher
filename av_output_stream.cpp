@@ -470,7 +470,7 @@ int AVOutputStream::WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_
 //input_frame -- 输入音频帧的信息
 //lTimeStamp -- 时间戳，时间单位为1/1000000
 //
-int  AVOutputStream::WriteAudioFrame(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp)
+int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp)
 {
 //    对音频编码（AAC），然后输出到指定的封装文件
     if (nullptr == audio_stream_)
@@ -708,5 +708,10 @@ int  AVOutputStream::WriteAudioFrame(AVStream* input_stream, AVFrame* input_fram
         av_frame_free(&output_frame);
     }//while
 
+    return 0;
+}
+
+int AVOutputStream::WriteSpeakerFrame(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp)
+{
     return 0;
 }

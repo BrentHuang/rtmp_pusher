@@ -11,12 +11,12 @@ public:
     VideoCapture();
     ~VideoCapture();
 
-    void SetVideoOpts(int width, int height, int frame_rate);
+    void SetDeviceOpts(int width, int height, int frame_rate);
+    void SetCaptureCB(VideoCaptureCB cb);
     int GetVideoOpts(int& width, int& height, int& frame_rate, AVPixelFormat& pix_fmt);
 
-    int Open();
-    void Close();
-    int Start();
+private:
+    void OnFrameReady(AVStream* stream, AVFrame* frame, int64_t timestamp) override;
 
 private:
     int width_;

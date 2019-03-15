@@ -40,7 +40,9 @@ public:
     int WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_pix_fmt, AVFrame* input_frame, int64_t timestamp);
 
     // 写入一帧音频
-    int WriteAudioFrame(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp);
+    int WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp);
+
+    int WriteSpeakerFrame(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp);
 
 private:
     AVCodecID video_codec_id_;
