@@ -19,6 +19,7 @@ CaptureDevice::CaptureDevice() : fmt_name_(), device_name_()
     fmt_ctx_ = nullptr;
     stream_idx_ = -1;
     capture_thread_ = nullptr;
+    start_time_ = 0;
 }
 
 CaptureDevice::~CaptureDevice()

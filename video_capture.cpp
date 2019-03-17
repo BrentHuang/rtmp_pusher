@@ -6,6 +6,7 @@ VideoCapture::VideoCapture()
     width_ = 0;
     height_ = 0;
     frame_rate_ = 0;
+    capture_cb_ = nullptr;
 }
 
 VideoCapture::~VideoCapture()
