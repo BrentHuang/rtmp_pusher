@@ -8,22 +8,19 @@
 
 struct Global
 {
-    // 文件解析线程、播放线程之间的同步
-    QWaitCondition file_parse_cond;
-    QMutex file_parse_mutex;
-
-    std::atomic_bool app_exit;
+    QMutex write_file_mutex;
+    std::atomic_bool thread_exit;
 
     Config config;
 
-    Global() : config()
+    Global() : write_file_mutex(), config()
     {
-        app_exit = false;
+        thread_exit = false;
     }
 
     ~Global() {}
 };
 
-#define GLOBAL ((Global*) Singleton<Global>::Instance().get())
+#define GLOBAL static_cast<Global*>(Singleton<Global>::Instance().get())
 
 #endif // GLOBAL_H

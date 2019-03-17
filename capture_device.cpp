@@ -10,6 +10,8 @@ extern "C" {
 }
 #endif
 
+#include "global.h"
+
 CaptureDevice::CaptureDevice() : fmt_name_(), device_name_()
 {
     prefix_ = false;
@@ -118,8 +120,6 @@ void CaptureDevice::Close()
 {
     if (capture_thread_ != nullptr)
     {
-        // TODO 发送退出信号
-
         capture_thread_->join();
         delete capture_thread_;
         capture_thread_ = nullptr;
@@ -140,7 +140,7 @@ int CaptureDevice::StartCapture(int64_t timestamp)
 {
     if (-1 == stream_idx_)
     {
-        qDebug() << "not open";
+        qDebug() << "device not open, name: " << QString::fromStdString(device_name_);
         return -1;
     }
 
@@ -164,11 +164,10 @@ int CaptureDevice::CaptureThreadFunc(void* args)
     {
         capture_device->ReadPackets();
 
-        // TODO
-//        if (exit_thread)
-//        {
-//            break;
-//        }
+        if (GLOBAL->thread_exit)
+        {
+            break;
+        }
     }
 
     return 0;
@@ -215,4 +214,5 @@ int CaptureDevice::ReadPackets()
     }
 
     av_frame_free(&frame);
+    return 0;
 }

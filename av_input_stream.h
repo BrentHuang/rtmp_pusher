@@ -36,9 +36,6 @@ private:
     VideoCapture video_capture_;
     AudioCapture microphone_;
     AudioCapture speaker_;
-
-//    std::atomic_bool exit_thread_;
-//    QMutex write_file_mutex_;
 };
 
 #endif // AV_INPUT_STREAM_H

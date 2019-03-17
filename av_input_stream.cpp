@@ -1,6 +1,5 @@
 ﻿#include "av_input_stream.h"
 #include <QDebug>
-#include <qsystemdetection.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,6 +9,8 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#include "global.h"
 
 AVInputStream::AVInputStream() : video_capture_(), microphone_(), speaker_()
 {
@@ -75,6 +76,8 @@ int AVInputStream::Open()
 
 void AVInputStream::Close()
 {
+    GLOBAL->thread_exit = true;
+
     video_capture_.Close();
     microphone_.Close();
     speaker_.Close();
@@ -82,12 +85,13 @@ void AVInputStream::Close()
 
 int AVInputStream::StartCapture()
 {
-    const int start_time = av_gettime();
+    const int64_t start_time = av_gettime();
 
     video_capture_.StartCapture(start_time);
     microphone_.StartCapture(start_time);
     speaker_.StartCapture(start_time);
 
+    GLOBAL->thread_exit = false;
     return 0;
 }
 

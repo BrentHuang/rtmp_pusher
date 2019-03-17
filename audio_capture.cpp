@@ -1,15 +1,6 @@
 #include "audio_capture.h"
 #include <QDebug>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <libavdevice/avdevice.h>
-#include <libavutil/time.h>
-#ifdef __cplusplus
-}
-#endif
-
 AudioCapture::AudioCapture()
 {
     sample_rate_ = 0;

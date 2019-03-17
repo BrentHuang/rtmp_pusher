@@ -1,4 +1,5 @@
 ﻿#include "av_output_stream.h"
+#include <QMutexLocker>
 
 #ifdef __cplusplus
 extern "C" {
@@ -9,6 +10,8 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#include "global.h"
 
 AVOutputStream::AVOutputStream()
 {
@@ -362,6 +365,8 @@ void  AVOutputStream::Close()
 //
 int AVOutputStream::WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_pix_fmt, AVFrame* input_frame, int64_t timestamp)
 {
+    QMutexLocker lock(&GLOBAL->write_file_mutex);
+
     (void) input_stream;
 
 //    对传入的图像帧进行编码（H264），并且写到指定的封装文件
@@ -472,6 +477,8 @@ int AVOutputStream::WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_
 //
 int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp)
 {
+    QMutexLocker lock(&GLOBAL->write_file_mutex);
+
 //    对音频编码（AAC），然后输出到指定的封装文件
     if (nullptr == audio_stream_)
     {
