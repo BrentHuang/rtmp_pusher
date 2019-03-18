@@ -185,7 +185,13 @@ void MainWindow::OnStartStream()
             break;
         }
 
-        if (input_stream_.StartCapture() != 0)
+        if (output_stream_.Start() != 0)
+        {
+            qDebug() << "failed to start record";
+            break;
+        }
+
+        if (input_stream_.Start() != 0)
         {
             qDebug() << "failed to start capture";
             break;
@@ -196,8 +202,12 @@ void MainWindow::OnStartStream()
 
     if (ret != 0)
     {
-        output_stream_.Close();
+        input_stream_.Stop();
         input_stream_.Close();
+
+        output_stream_.Stop();
+        output_stream_.Close();
+
         return;
     }
 
@@ -206,7 +216,10 @@ void MainWindow::OnStartStream()
 
 void MainWindow::OnStopStream()
 {
+    input_stream_.Stop();
     input_stream_.Close();
+
+    output_stream_.Stop();
     output_stream_.Close();
 
     GLOBAL->config.SetStarted(false);

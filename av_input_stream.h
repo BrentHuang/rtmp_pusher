@@ -26,7 +26,8 @@ public:
     int Open();
     void Close();
 
-    int StartCapture();
+    int Start();
+    void Stop();
 
     int GetVideoOpts(int& width, int& height, int& frame_rate, AVPixelFormat& pix_fmt);
     int GetMicrophoneOpts(int& sample_rate, AVSampleFormat& sample_fmt, int& channels);

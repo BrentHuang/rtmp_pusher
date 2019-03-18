@@ -33,6 +33,9 @@ public:
     // 关闭输出
     void Close();
 
+    int Start();
+    void Stop();
+
 //       Write_video_frame和write_audio_frame是CAVOutputStream的两个很重要的函数，其中对音频包的处理略为复杂一些，
 //    主要是因为输入的音频和编码后的音频的frame_size不一样，中间需要一个Fifo作缓冲队列。
 //    另外时间戳PTS的计算也是很关键的，弄得不好保存的文件播放视音频就不同步

@@ -127,13 +127,6 @@ int CaptureDevice::Open(bool video)
 
 void CaptureDevice::Close()
 {
-    if (capture_thread_ != nullptr)
-    {
-        capture_thread_->join();
-        delete capture_thread_;
-        capture_thread_ = nullptr;
-    }
-
     // 关闭输入流
     if (fmt_ctx_ != nullptr)
     {
@@ -142,10 +135,9 @@ void CaptureDevice::Close()
 
     stream_idx_ = -1;
     input_fmt_ = nullptr;
-    start_time_ = 0;
 }
 
-int CaptureDevice::StartCapture(int64_t timestamp)
+int CaptureDevice::Start(int64_t timestamp)
 {
     if (-1 == stream_idx_)
     {
@@ -163,6 +155,18 @@ int CaptureDevice::StartCapture(int64_t timestamp)
     }
 
     return 0;
+}
+
+void CaptureDevice::Stop()
+{
+    if (capture_thread_ != nullptr)
+    {
+        capture_thread_->join();
+        delete capture_thread_;
+        capture_thread_ = nullptr;
+    }
+
+    start_time_ = 0;
 }
 
 int CaptureDevice::CaptureThreadFunc(void* args)

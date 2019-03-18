@@ -80,7 +80,10 @@ SOURCES += \
     signal_center.cpp \
     video_capture.cpp \
     audio_capture.cpp \
-    capture_device.cpp
+    capture_device.cpp \
+    frame_handler.cpp \
+    video_handler.cpp \
+    audio_handler.cpp
 
 HEADERS += \
         main_window.h \
@@ -93,7 +96,10 @@ HEADERS += \
     global.h \
     video_capture.h \
     audio_capture.h \
-    capture_device.h
+    capture_device.h \
+    frame_handler.h \
+    video_handler.h \
+    audio_handler.h
 
 FORMS += \
         main_window.ui \

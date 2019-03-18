@@ -87,8 +87,6 @@ int AVInputStream::Open()
 
 void AVInputStream::Close()
 {
-    GLOBAL->thread_exit = true;
-
     if (GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA) || GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP))
     {
         video_capture_.Close();
@@ -105,27 +103,47 @@ void AVInputStream::Close()
     }
 }
 
-int AVInputStream::StartCapture()
+int AVInputStream::Start()
 {
     const int64_t start_time = av_gettime();
 
     if (GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA) || GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP))
     {
-        video_capture_.StartCapture(start_time);
+        video_capture_.Start(start_time);
     }
 
     if (GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE))
     {
-        microphone_.StartCapture(start_time);
+        microphone_.Start(start_time);
     }
 
     if (GLOBAL->config.TestCompos(COMPOS_BIT_SPEAKER))
     {
-        speaker_.StartCapture(start_time);
+        speaker_.Start(start_time);
     }
 
     GLOBAL->thread_exit = false;
     return 0;
+}
+
+void AVInputStream::Stop()
+{
+    GLOBAL->thread_exit = true;
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA) || GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP))
+    {
+        video_capture_.Stop();
+    }
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE))
+    {
+        microphone_.Stop();
+    }
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_SPEAKER))
+    {
+        speaker_.Stop();
+    }
 }
 
 int AVInputStream::GetVideoOpts(int& width, int& height, int& frame_rate, AVPixelFormat& pix_fmt)

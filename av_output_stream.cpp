@@ -346,6 +346,16 @@ void  AVOutputStream::Close()
     audio_stream_ = nullptr;
 }
 
+int AVOutputStream::Start()
+{
+    return 0;
+}
+
+void AVOutputStream::Stop()
+{
+
+}
+
 //input_st -- 输入流的信息
 //input_frame -- 输入视频帧的信息
 //lTimeStamp -- 时间戳，时间单位为1/1000000

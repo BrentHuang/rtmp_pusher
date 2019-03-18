@@ -26,7 +26,8 @@ public:
     int Open(bool video);
     void Close();
 
-    int StartCapture(int64_t timestamp);
+    int Start(int64_t timestamp);
+    void Stop();
 
 protected:
     static int CaptureThreadFunc(void* args);
