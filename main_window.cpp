@@ -18,9 +18,9 @@ extern "C" {
 
 MainWindow* g_main_frame = nullptr;
 
-static int VideoCaptureCallback(AVStream* input_stream, AVPixelFormat input_pix_fmt, AVFrame* input_frame, int64_t timestamp)
+static int VideoCaptureCallback(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp)
 {
-    g_main_frame->output_stream_.WriteVideoFrame(input_stream, input_pix_fmt, input_frame, timestamp);
+    g_main_frame->output_stream_.WriteVideoFrame(input_stream, input_frame, timestamp);
     return 0;
 }
 
@@ -76,12 +76,12 @@ void MainWindow::OnStartStream()
 
     if (GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE))
     {
-        input_stream_.SetMicrophoneName("dshow", GLOBAL->config.GetAudioCaptureDevice(), true);
+        input_stream_.SetMicrophoneName("dshow", GLOBAL->config.GetMicrophone(), true);
     }
 
-    if (GLOBAL->config.TestCompos(COMPOS_BIT_SYSTEM_VOICE))
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_SPEAKER))
     {
-        input_stream_.SetSpeakerName("dshow", GLOBAL->config.GetAudio2CaptureDevice(), true);
+        input_stream_.SetSpeakerName("dshow", GLOBAL->config.GetSpeaker(), true);
     }
 #elif defined(Q_OS_LINUX)
     if (GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA))
@@ -95,12 +95,12 @@ void MainWindow::OnStartStream()
 
     if (GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE))
     {
-        input_stream_.SetAudioCaptureDevice("alsa", GLOBAL->config.GetAudioCaptureDevice(), false);
+        input_stream_.SetAudioCaptureDevice("alsa", GLOBAL->config.GetMicrophone(), false);
     }
 
     if (GLOBAL->config.TestCompos(COMPOS_BIT_SYSTEM_VOICE))
     {
-        input_stream_.SetAudio2CaptureDevice("alsa", GLOBAL->config.GetAudio2CaptureDevice(), false);
+        input_stream_.SetAudio2CaptureDevice("alsa", GLOBAL->config.GetSpeaker(), false);
     }
 #endif
 
@@ -118,11 +118,13 @@ void MainWindow::OnStartStream()
             break;
         }
 
-        int cx, cy, fps;
-        AVPixelFormat pix_fmt;
-
-        if (0 == input_stream_.GetVideoOpts(cx, cy, fps, pix_fmt))
+        if (GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA) || GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP))
         {
+            int cx, cy, fps;
+            AVPixelFormat pix_fmt;
+
+            input_stream_.GetVideoOpts(cx, cy, fps, pix_fmt);
+
             const int bit_rate = (int) (1000000.0 * cy / 1080); // 基本所有摄像头都支持的分辨率："320*240", "640*480", "1280*720"
             qDebug() << "output video bit rate:" << bit_rate;
 
@@ -155,14 +157,27 @@ void MainWindow::OnStartStream()
             output_stream_.SetVideoCodecProp(AV_CODEC_ID_H264, fps, bit_rate, fps * 2, cx, cy); // gop_size=2*fps，视频比特率按比例调
         }
 
-        int sample_rate, channels;
-        AVSampleFormat sample_fmt;
+        int microphone_sample_rate = 192000, microphone_channels = 18;
+        AVSampleFormat microphone_sample_fmt;
 
-        if (0 == input_stream_.GetMicrophoneOpts(sample_rate, sample_fmt, channels))
+        int speaker_sample_rate = 192000, speaker_channels = 18;
+        AVSampleFormat speaker_sample_fmt;
+
+        if (GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE))
         {
-            const int bit_rate = 32000 * channels;
-            output_stream_.SetAudioCodecProp(AV_CODEC_ID_AAC, sample_rate, channels, bit_rate); // 音频比特率：单声道32k，双声道64k，音乐128k
+            input_stream_.GetMicrophoneOpts(microphone_sample_rate, microphone_sample_fmt, microphone_channels);
         }
+
+        if (GLOBAL->config.TestCompos(COMPOS_BIT_SPEAKER))
+        {
+            input_stream_.GetSpeakerOpts(speaker_sample_rate, speaker_sample_fmt, speaker_channels);
+        }
+
+        const int sample_rate = qMin(microphone_sample_rate, speaker_sample_rate);
+        const int channels = qMin(microphone_channels, speaker_channels);
+
+        const int bit_rate = 32000 * channels;
+        output_stream_.SetAudioCodecProp(AV_CODEC_ID_AAC, sample_rate, channels, bit_rate); // 音频比特率：单声道32k，双声道64k，音乐128k
 
         if (output_stream_.Open(GLOBAL->config.GetFilePath()) != 0)
         {

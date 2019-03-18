@@ -9,7 +9,7 @@
 enum
 {
     COMPOS_BIT_MIN = 0,
-    COMPOS_BIT_SYSTEM_VOICE = 0,
+    COMPOS_BIT_SPEAKER = 0,
     COMPOS_BIT_DESKTOP = 1,
     COMPOS_BIT_CAMERA = 2,
     COMPOS_BIT_MICROPHONE = 3,
@@ -25,11 +25,11 @@ public:
     void SetVideoCaptureDevice(const std::string& device_name);
     std::string GetVideoCaptureDevice();
 
-    void SetAudioCaptureDevice(const std::string& device_name);
-    std::string GetAudioCaptureDevice();
+    void SetMicrophone(const std::string& device_name);
+    std::string GetMicrophone();
 
-    void SetAudio2CaptureDevice(const std::string& device_name);
-    std::string GetAudio2CaptureDevice();
+    void SetSpeaker(const std::string& device_name);
+    std::string GetSpeaker();
 
     bool IsValidComposSet();
     void SetCompos(int bit, bool on);
@@ -45,8 +45,8 @@ private:
     QMutex mutex_;
 
     std::string video_device_;
-    std::string audio_device_;
-    std::string audio2_device_;
+    std::string microphone_;
+    std::string speaker_;
 
     // 麦克风、摄像头、系统桌面，系统声音的合法组合，用4个bit位表示
     typedef std::vector<std::bitset<COMPOS_BIT_MAX>> ComposVec;

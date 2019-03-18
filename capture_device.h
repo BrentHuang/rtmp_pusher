@@ -12,6 +12,8 @@ extern "C" {
 }
 #endif
 
+typedef int (*CaptureCB)(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp);
+
 class CaptureDevice
 {
 public:
@@ -19,6 +21,7 @@ public:
     ~CaptureDevice();
 
     void SetDeviceName(const std::string& fmt_name, const std::string& device_name, bool prefix);
+    void SetCaptureCB(CaptureCB cb);
 
     int Open(bool video);
     void Close();
@@ -28,7 +31,6 @@ public:
 protected:
     static int CaptureThreadFunc(void* args);
     int ReadPackets();
-    virtual void OnFrameReady(AVStream* stream, AVFrame* frame, int64_t timestamp) = 0;
 
 protected:
     std::string fmt_name_;
@@ -39,6 +41,7 @@ protected:
     int stream_idx_;
     std::thread* capture_thread_;
     int64_t start_time_;
+    CaptureCB capture_cb_;
 };
 
 #endif // CAPTURE_DEVICE_H

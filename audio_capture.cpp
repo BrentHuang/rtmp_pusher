@@ -17,11 +17,6 @@ void AudioCapture::SetDeviceOpts(int sample_rate, int channels)
     channels_ = channels;
 }
 
-void AudioCapture::SetCaptureCB(AudioCaptureCB cb)
-{
-    capture_cb_ = cb;
-}
-
 int AudioCapture::GetAudioOpts(int& sample_rate, AVSampleFormat& sample_fmt, int& channels)
 {
     if (nullptr == fmt_ctx_ || -1 == stream_idx_)
@@ -30,9 +25,11 @@ int AudioCapture::GetAudioOpts(int& sample_rate, AVSampleFormat& sample_fmt, int
     }
 
     AVStream* stream = fmt_ctx_->streams[stream_idx_];
-    sample_fmt = stream->codec->sample_fmt;
-    sample_rate = stream->codec->sample_rate;
-    channels = stream->codec->channels;
+    AVCodecContext* codec_ctx = stream->codec;
+
+    sample_fmt = codec_ctx->sample_fmt;
+    sample_rate = codec_ctx->sample_rate;
+    channels = codec_ctx->channels;
 
     QString sample_fmt_str;
     switch (sample_fmt)
@@ -50,14 +47,6 @@ int AudioCapture::GetAudioOpts(int& sample_rate, AVSampleFormat& sample_fmt, int
         break;
     }
 
-    qDebug() << sample_rate << sample_fmt_str << channels;
+    qDebug() << sample_rate << sample_fmt_str << channels << codec_ctx->bit_rate;
     return 0;
-}
-
-void AudioCapture::OnFrameReady(AVStream* stream, AVFrame* frame, int64_t timestamp)
-{
-    if (capture_cb_ != nullptr)
-    {
-        capture_cb_(stream, frame, timestamp);
-    }
 }

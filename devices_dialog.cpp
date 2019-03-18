@@ -332,7 +332,7 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
     ui->checkBox_Video->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA));
     ui->checkBox_Audio->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE));
     ui->checkBox_VideoDesktop->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP));
-    ui->checkBox_AudioSystem->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_SYSTEM_VOICE));
+    ui->checkBox_AudioSystem->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_SPEAKER));
 
     if (!GLOBAL->config.GetFilePath().empty())
     {
@@ -420,14 +420,14 @@ void DevicesDialog::on_comboBox_Video_currentIndexChanged(const QString& arg1)
 
 void DevicesDialog::on_comboBox_Audio_currentIndexChanged(const QString& arg1)
 {
-    last_audio_device_ = QString::fromStdString(GLOBAL->config.GetAudioCaptureDevice());
-    GLOBAL->config.SetAudioCaptureDevice(arg1.toStdString());
+    last_audio_device_ = QString::fromStdString(GLOBAL->config.GetMicrophone());
+    GLOBAL->config.SetMicrophone(arg1.toStdString());
 }
 
 void DevicesDialog::on_comboBox_AudioSpeaker_currentIndexChanged(const QString& arg1)
 {
-    last_audio2_device_ = QString::fromStdString(GLOBAL->config.GetAudio2CaptureDevice());
-    GLOBAL->config.SetAudio2CaptureDevice(arg1.toStdString());
+    last_audio2_device_ = QString::fromStdString(GLOBAL->config.GetSpeaker());
+    GLOBAL->config.SetSpeaker(arg1.toStdString());
 }
 
 void DevicesDialog::on_pushButton_Start_clicked()
@@ -479,7 +479,7 @@ void DevicesDialog::on_checkBox_Video_stateChanged(int arg1)
 void DevicesDialog::on_checkBox_AudioSystem_stateChanged(int arg1)
 {
     (void) arg1;
-    GLOBAL->config.SetCompos(COMPOS_BIT_SYSTEM_VOICE, ui->checkBox_AudioSystem->isChecked());
+    GLOBAL->config.SetCompos(COMPOS_BIT_SPEAKER, ui->checkBox_AudioSystem->isChecked());
 }
 
 void DevicesDialog::on_checkBox_VideoDesktop_stateChanged(int arg1)

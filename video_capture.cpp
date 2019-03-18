@@ -20,11 +20,6 @@ void VideoCapture::SetDeviceOpts(int width, int height, int frame_rate)
     frame_rate_ = frame_rate;
 }
 
-void VideoCapture::SetCaptureCB(VideoCaptureCB cb)
-{
-    capture_cb_ = cb;
-}
-
 int VideoCapture::GetVideoOpts(int& width, int& height, int& frame_rate, AVPixelFormat& pix_fmt)
 {
     if (nullptr == fmt_ctx_ || -1 == stream_idx_)
@@ -34,12 +29,14 @@ int VideoCapture::GetVideoOpts(int& width, int& height, int& frame_rate, AVPixel
     }
 
     AVStream* stream = fmt_ctx_->streams[stream_idx_];
-    width = stream->codec->width;
-    height = stream->codec->height;
+    AVCodecContext* codec_ctx = stream->codec;
+
+    width = codec_ctx->width;
+    height = codec_ctx->height;
 
     if (stream->codec->framerate.den > 0)
     {
-        frame_rate = stream->codec->framerate.num / stream->codec->framerate.den;
+        frame_rate = codec_ctx->framerate.num / codec_ctx->framerate.den;
     }
     else if (stream->avg_frame_rate.den > 0)
     {
@@ -84,14 +81,6 @@ int VideoCapture::GetVideoOpts(int& width, int& height, int& frame_rate, AVPixel
         break;
     }
 
-    qDebug() << width << "x" << height << frame_rate << pix_fmt_str;
+    qDebug() << width << "x" << height << frame_rate << pix_fmt_str << codec_ctx->bit_rate;
     return 0;
-}
-
-void VideoCapture::OnFrameReady(AVStream* stream, AVFrame* frame, int64_t timestamp)
-{
-    if (capture_cb_ != nullptr)
-    {
-        capture_cb_(stream, stream->codec->pix_fmt, frame, timestamp);
-    }
 }

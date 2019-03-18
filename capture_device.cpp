@@ -33,6 +33,11 @@ void CaptureDevice::SetDeviceName(const std::string& fmt_name, const std::string
     prefix_ = prefix;
 }
 
+void CaptureDevice::SetCaptureCB(CaptureCB cb)
+{
+    capture_cb_ = cb;
+}
+
 int CaptureDevice::Open(bool video)
 {
     input_fmt_ = av_find_input_format(fmt_name_.c_str());
@@ -46,7 +51,7 @@ int CaptureDevice::Open(bool video)
     AVDictionary* opts = nullptr;
     // if not setting rtbufsize, error messages will be shown in cmd, but you can still watch or record the stream
     // correctly in most time. setting rtbufsize will erase those error messages, however, larger rtbufsize will bring latency
-//    av_dict_set(&opts, "rtbufsize", "10M", 0); // TODO 在分辨率、帧率比较高的时候，这个buf size要设大一点？
+    av_dict_set(&opts, "rtbufsize", "10M", 0); // TODO 在分辨率、帧率比较高的时候，这个buf size要设大一点？
 //        av_dict_set(&video_device_opts, "video_size", "640x480", 0);
 //        av_dict_set(&video_device_opts, "framerate", "15", 0);
 
@@ -86,11 +91,12 @@ int CaptureDevice::Open(bool video)
         return -1;
     }
 
+    const AVMediaType media_type = video ? AVMEDIA_TYPE_VIDEO : AVMEDIA_TYPE_AUDIO;
     stream_idx_ = -1;
 
     for (int i = 0; i < (int) fmt_ctx_->nb_streams; ++i)
     {
-        if (AVMEDIA_TYPE_VIDEO == fmt_ctx_->streams[i]->codec->codec_type)
+        if (media_type == fmt_ctx_->streams[i]->codec->codec_type)
         {
             stream_idx_ = i;
             break;
@@ -102,6 +108,8 @@ int CaptureDevice::Open(bool video)
         qDebug() << "failed to find video stream";
         return -1;
     }
+
+    qDebug() << "stream idx: " << stream_idx_;
 
     // 打开视频解码器或音频解码器，实际上，我们可以把设备也看成是一般的文件源，
     // 而文件一般采用某种封装格式，要播放出来需要进行解复用，分离成裸流，然后对单独的视频流、音频流进行解码。
@@ -177,6 +185,7 @@ int CaptureDevice::CaptureThreadFunc(void* args)
 int CaptureDevice::ReadPackets()
 {
     AVPacket pkt;
+
     av_init_packet(&pkt);
     pkt.data = nullptr;
     pkt.size = 0;
@@ -189,8 +198,9 @@ int CaptureDevice::ReadPackets()
     }
 
     AVStream* stream = fmt_ctx_->streams[pkt.stream_index];
+    AVCodecContext* codec_ctx = stream->codec;
 
-    ret = avcodec_send_packet(stream->codec, &pkt);
+    ret = avcodec_send_packet(codec_ctx, &pkt);
     if (ret != 0)
     {
         qDebug() << "avcodec_send_packet failed";
@@ -204,10 +214,13 @@ int CaptureDevice::ReadPackets()
         return -1;
     }
 
-    ret = avcodec_receive_frame(stream->codec, frame);
+    ret = avcodec_receive_frame(codec_ctx, frame);
     if (0 == ret)
     {
-        OnFrameReady(stream, frame, av_gettime() - start_time_);
+        if (capture_cb_ != nullptr)
+        {
+            capture_cb_(stream, frame, av_gettime() - start_time_);
+        }
     }
     else
     {

@@ -1,4 +1,5 @@
 ﻿#include "av_output_stream.h"
+#include <QDebug>
 #include <QMutexLocker>
 
 #ifdef __cplusplus
@@ -31,7 +32,7 @@ AVOutputStream::AVOutputStream()
     video_codec_ctx_ = nullptr;
     video_stream_ = nullptr;
     yuv_frame_ = nullptr;
-    out_buffer_ = nullptr;
+    out_buf_ = nullptr;
 
     audio_codec_ctx_ = nullptr;
     audio_stream_ = nullptr;
@@ -73,38 +74,42 @@ void AVOutputStream::SetAudioCodecProp(AVCodecID codec_id, int sample_rate, int 
     audio_bit_rate_ = bit_rate;
 }
 
-int AVOutputStream::Open(const std::string& file_path)
+int AVOutputStream::Open(const std::string& url)
 {
-    // output initialize
-    int ret = avformat_alloc_output_context2(&fmt_ctx_, nullptr, nullptr, file_path.c_str());
+    int ret = avformat_alloc_output_context2(&fmt_ctx_, nullptr, "flv", url.c_str());
     if (ret < 0)
     {
+        qDebug() << "avformat_alloc_output_context2 failed";
         return -1;
     }
 
-    if (video_codec_id_ != AV_CODEC_ID_NONE)
+    if (video_codec_id_ != AV_CODEC_ID_H264 || audio_codec_id_ != AV_CODEC_ID_AAC)
     {
-        // output video encoder initialize
+        qDebug() << "only support h264+aac";
+        return -1;
+    }
+
+    {
         AVCodec* codec = avcodec_find_encoder(video_codec_id_);
         if (nullptr == codec)
         {
-//            ATLTRACE("Can not find output video encoder! (没有找到合适的编码器！)\n");
+            qDebug() << "failed to find encoder by id: " << video_codec_id_;
             return -1;
         }
 
         video_codec_ctx_ = avcodec_alloc_context3(codec);
         if (nullptr == video_codec_ctx_)
         {
+            qDebug() << "failed to alloc video codec context";
             return -1;
         }
 
         video_codec_ctx_->pix_fmt = AV_PIX_FMT_YUV420P;
         video_codec_ctx_->width = width_;
         video_codec_ctx_->height = height_;
-        video_codec_ctx_->time_base.num = 1;
-        video_codec_ctx_->time_base.den = frame_rate_;
+        video_codec_ctx_->time_base = { 1, frame_rate_ }; // 帧率的倒数
         video_codec_ctx_->bit_rate = video_bit_rate_;
-        video_codec_ctx_->gop_size = gop_size_;
+        video_codec_ctx_->gop_size = gop_size_; // gop size帧插入1个I帧，I帧越少，视频越小
 
         /* Some formats want stream headers to be separate. */
         if (fmt_ctx_->oformat->flags & AVFMT_GLOBALHEADER)
@@ -114,91 +119,77 @@ int AVOutputStream::Open(const std::string& file_path)
 
         AVDictionary* opts = 0;
 
-        // set H264 codec param
-        if (AV_CODEC_ID_H264 == video_codec_id_)
-        {
-            // TODO
-            //pCodecCtx->me_range = 16;
-            //pCodecCtx->max_qdiff = 4;
-            //pCodecCtx->qcompress = 0.6;
-            video_codec_ctx_->qmin = 10;
-            video_codec_ctx_->qmax = 51;
-            //Optional Param
-            video_codec_ctx_->max_b_frames = 0; // 不要B帧？
+        // 最大和最小量化系数
+        video_codec_ctx_->qmin = 10;
+        video_codec_ctx_->qmax = 50;
+        // 因为我们的量化系数q是在qmin和qmax之间浮动的，qblur表示这种浮动变化的变化程度，取值范围0.0～1.0，取0表示不削减
+        video_codec_ctx_->qblur = 0.0;
+        // 两个非B帧之间允许出现多少个B帧数。设置0表示不使用B。B帧越多，图片越小
+        video_codec_ctx_->max_b_frames = 0;
 
-#if 1
-            //下面设置两个参数影响编码延时，如果不设置，编码器默认会缓冲很多帧
-            // Set H264 preset and tune
-            av_dict_set(&opts, "preset", "fast", 0);
-            av_dict_set(&opts, "tune", "zerolatency", 0);
-#else
-            /**
-             * ultrafast,superfast, veryfast, faster, fast, medium
-             * slow, slower, veryslow, placebo.
-             注意：这是x264编码速度的选项， 设置该参数可以降低编码延时
-             */
-            av_opt_set(video_codec_ctx_->priv_data, "preset", "superfast", 0);
-#endif
-        }
+        //下面两个参数影响编码延时，如果不设置，编码器默认会缓冲很多帧
+        av_dict_set(&opts, "preset", "fast", 0);
+        av_dict_set(&opts, "tune", "zerolatency", 0);
+
+        av_dict_set(&opts, "profile", "baseline", 0);
 
         ret = avcodec_open2(video_codec_ctx_, codec, &opts);
         if (ret < 0)
         {
-//            ATLTRACE("Failed to open output video encoder! (编码器打开失败！)\n");
+            qDebug() << "failed to open video codec";
             return -1;
         }
 
-        // Add a new stream to output,should be called by the user before avformat_write_header() for muxing
+        // Add a new stream to output, should be called by the user before avformat_write_header() for muxing
         video_stream_ = avformat_new_stream(fmt_ctx_, codec);
         if (nullptr == video_stream_)
         {
+            qDebug() << "failed to add video stream to output";
             return -1;
         }
 
-        video_stream_->time_base.num = 1;
-        video_stream_->time_base.den = frame_rate_;
-//        video_stream_->codec = video_codec_ctx_;
-
-        ret = avcodec_parameters_from_context(video_stream_->codecpar, video_codec_ctx_);
-        if (ret < 0)
-        {
-            return -1;
-        }
+        video_stream_->time_base = { 1, frame_rate_ };
+        video_stream_->codec = video_codec_ctx_;
 
         // Initialize the buffer to store YUV frames to be encoded.
         yuv_frame_ = av_frame_alloc();
         if (nullptr == yuv_frame_)
         {
+            qDebug() << "failed to alloc yuv frame";
             return -1;
         }
 
-        out_buffer_ = (uint8_t*) av_malloc(av_image_get_buffer_size(AV_PIX_FMT_YUV420P, video_codec_ctx_->width, video_codec_ctx_->height, 1));
-        if (nullptr == out_buffer_)
+        out_buf_ = (uint8_t*) av_malloc(av_image_get_buffer_size(
+                                            video_codec_ctx_->pix_fmt,
+                                            video_codec_ctx_->width, video_codec_ctx_->height, 1));
+        if (nullptr == out_buf_)
         {
+            qDebug() << "failed to alloc out buffer";
             return -1;
         }
 
-        ret = av_image_fill_arrays(yuv_frame_->data, yuv_frame_->linesize, out_buffer_, AV_PIX_FMT_YUV420P,
-                                   video_codec_ctx_->width, video_codec_ctx_->height, 1);
+        ret = av_image_fill_arrays(yuv_frame_->data, yuv_frame_->linesize, out_buf_,
+                                   video_codec_ctx_->pix_fmt, video_codec_ctx_->width, video_codec_ctx_->height, 1);
         if (ret < 0)
         {
+            qDebug() << "av_image_fill_arrays failed";
             return -1;
         }
     }
 
-    if (audio_codec_id_ != AV_CODEC_ID_NONE)
+    ///////////////////////////////////////////////////////////////////////////
     {
-        //output audio encoder initialize
         AVCodec* codec = avcodec_find_encoder(audio_codec_id_);
         if (nullptr == codec)
         {
-//            ATLTRACE("Can not find output audio encoder! (没有找到合适的编码器！)\n");
+            qDebug() << "failed to find encoder by id: " << video_codec_id_;
             return -1;
         }
 
         audio_codec_ctx_ = avcodec_alloc_context3(codec);
         if (nullptr == audio_codec_ctx_)
         {
+            qDebug() << "failed to alloc audio codec context";
             return -1;
         }
 
@@ -207,14 +198,10 @@ int AVOutputStream::Open(const std::string& file_path)
         audio_codec_ctx_->sample_rate = sample_rate_;
         audio_codec_ctx_->sample_fmt = codec->sample_fmts[0];
         audio_codec_ctx_->bit_rate = audio_bit_rate_;
-        audio_codec_ctx_->time_base.num = 1;
-        audio_codec_ctx_->time_base.den = audio_codec_ctx_->sample_rate;
+        audio_codec_ctx_->time_base = { 1, audio_codec_ctx_->sample_rate };
 
-        if (AV_CODEC_ID_AAC == audio_codec_id_)
-        {
-            /** Allow the use of the experimental AAC encoder */
-            audio_codec_ctx_->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
-        }
+        /** Allow the use of the experimental AAC encoder */
+        audio_codec_ctx_->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL; // if AV_CODEC_ID_AAC == audio_codec_id_
 
         /* Some formats want stream headers to be separate. */
         if (fmt_ctx_->oformat->flags & AVFMT_GLOBALHEADER)
@@ -225,60 +212,61 @@ int AVOutputStream::Open(const std::string& file_path)
         ret = avcodec_open2(audio_codec_ctx_, codec, nullptr);
         if (ret < 0)
         {
-//            ATLTRACE("Failed to open ouput audio encoder! (编码器打开失败！)\n");
+            qDebug() << "failed to open audio codec";
             return -1;
         }
 
-        // Add a new stream to output,should be called by the user before avformat_write_header() for muxing
+        // Add a new stream to output, should be called by the user before avformat_write_header() for muxing
         audio_stream_ = avformat_new_stream(fmt_ctx_, codec);
         if (nullptr == audio_stream_)
         {
+            qDebug() << "failed to add audio stream to output";
             return -1;
         }
 
         audio_stream_->time_base.num = 1;
         audio_stream_->time_base.den = audio_codec_ctx_->sample_rate;
-//        audio_stream_->codec = audio_codec_ctx_;
-
-        ret = avcodec_parameters_from_context(audio_stream_->codecpar, audio_codec_ctx_);
-        if (ret < 0)
-        {
-            return -1;
-        }
+        audio_stream_->codec = audio_codec_ctx_;
 
         // Initialize the FIFO buffer to store audio samples to be encoded.
         audio_fifo_ = av_audio_fifo_alloc(audio_codec_ctx_->sample_fmt, audio_codec_ctx_->channels, 1);
         if (nullptr == audio_fifo_)
         {
+            qDebug() << "av_audio_fifo_alloc failed";
             return -1;
         }
 
         // Initialize the buffer to store converted samples to be encoded.
-
         /**
         * Allocate as many pointers as there are audio channels.
         * Each pointer will later point to the audio samples of the corresponding
         * channels (although it may be nullptr for interleaved formats).
         */
-        converted_input_samples_ = (uint8_t**) calloc(audio_codec_ctx_->channels, sizeof(**converted_input_samples_));
+        converted_input_samples_ = (uint8_t**) av_calloc(
+                                       audio_codec_ctx_->channels,
+                                       sizeof(**converted_input_samples_));
         if (nullptr == converted_input_samples_)
         {
-//            ATLTRACE("Could not allocate converted input sample pointers\n");
+            qDebug("failed to alloc converted input sample pointers");
             return -1;
         }
 
-        converted_input_samples_[0] = nullptr;
+        for (int i = 0; i < audio_codec_ctx_->channels; ++i)
+        {
+            converted_input_samples_[i] = nullptr;
+        }
     }
 
-    // Open output URL,set before avformat_write_header() for muxing
-    if (avio_open(&fmt_ctx_->pb, file_path.c_str(), AVIO_FLAG_READ_WRITE) < 0)
+    // Open output URL, set before avformat_write_header() for muxing
+    ret = avio_open(&fmt_ctx_->pb, url.c_str(), AVIO_FLAG_READ_WRITE);
+    if (ret < 0)
     {
-//        ATLTRACE("Failed to open output file! (输出文件打开失败！)\n");
+        qDebug() << "avio_open failed";
         return -1;
     }
 
     // Show some Information
-    av_dump_format(fmt_ctx_, 0, file_path.c_str(), 1);
+    av_dump_format(fmt_ctx_, 0, url.c_str(), 1);
 
     // Write File Header
     avformat_write_header(fmt_ctx_, nullptr);
@@ -306,10 +294,10 @@ void  AVOutputStream::Close()
         }
     }
 
-    if (out_buffer_)
+    if (out_buf_)
     {
-        av_free(out_buffer_);
-        out_buffer_ = nullptr;
+        av_free(out_buf_);
+        out_buf_ = nullptr;
     }
 
     if (yuv_frame_ != nullptr)
@@ -320,8 +308,7 @@ void  AVOutputStream::Close()
 
     if (converted_input_samples_ != nullptr)
     {
-        av_freep(&converted_input_samples_[0]);
-        //free(converted_input_samples);
+        av_freep(&converted_input_samples_);
         converted_input_samples_ = nullptr;
     }
 
@@ -363,11 +350,9 @@ void  AVOutputStream::Close()
 //input_frame -- 输入视频帧的信息
 //lTimeStamp -- 时间戳，时间单位为1/1000000
 //
-int AVOutputStream::WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_pix_fmt, AVFrame* input_frame, int64_t timestamp)
+int AVOutputStream::WriteVideoFrame(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp)
 {
     QMutexLocker lock(&GLOBAL->write_file_mutex);
-
-    (void) input_stream;
 
 //    对传入的图像帧进行编码（H264），并且写到指定的封装文件
     if (nullptr == video_stream_)
@@ -375,97 +360,129 @@ int AVOutputStream::WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_
         return -1;
     }
 
-    //ATLTRACE("Video timestamp: %ld \n", lTimeStamp);
+    qDebug() << "video timestamp:" << timestamp;
 
     if (-1 == first_video_ts1_)
     {
-//        TRACE("First Video timestamp: %ld \n", lTimeStamp);
         first_video_ts1_ = timestamp;
+        qDebug() << "first video ts1:" << first_video_ts1_;
     }
 
-    AVRational time_base_q = { 1, AV_TIME_BASE };
-
-    int ret = avcodec_parameters_to_context(video_codec_ctx_, video_stream_->codecpar);
-    if (ret < 0)
-    {
-        return -1;
-    }
+    AVCodecContext* input_codec_ctx = input_stream->codec;
+    video_codec_ctx_ = video_stream_->codec;
 
     if (nullptr == img_convert_ctx_)
     {
-        //camera data may has a pix fmt of RGB or sth else,convert it to YUV420
-        img_convert_ctx_ = sws_getContext(width_, height_, input_pix_fmt,
-                                          video_codec_ctx_->width, video_codec_ctx_->height, AV_PIX_FMT_YUV420P,
+        // camera data may has a pix fmt of RGB or sth else,convert it to YUV420
+        img_convert_ctx_ = sws_getContext(input_codec_ctx->width, input_codec_ctx->height, input_codec_ctx->pix_fmt,
+                                          video_codec_ctx_->width, video_codec_ctx_->height, video_codec_ctx_->pix_fmt,
                                           SWS_BICUBIC, nullptr, nullptr, nullptr);
         if (nullptr == img_convert_ctx_)
         {
+            qDebug("sws_getContext failed");
             return -1;
         }
     }
 
-    sws_scale(img_convert_ctx_, (const uint8_t* const*) input_frame->data, input_frame->linesize, 0, video_codec_ctx_->height,
+    sws_scale(img_convert_ctx_,
+              (const uint8_t* const*) input_frame->data, input_frame->linesize,
+              0, video_codec_ctx_->height,
               yuv_frame_->data, yuv_frame_->linesize);
+
     yuv_frame_->width = input_frame->width;
     yuv_frame_->height = input_frame->height;
-    yuv_frame_->format = AV_PIX_FMT_YUV420P;
+    yuv_frame_->format = video_codec_ctx_->pix_fmt;
 
-    AVPacket enc_pkt;
-    av_init_packet(&enc_pkt);
-    enc_pkt.data = nullptr;
-    enc_pkt.size = 0;
+    // 编码
+    AVPacket pkt;
 
-    int enc_got_frame = 0;
+    av_init_packet(&pkt);
+    pkt.data = nullptr;
+    pkt.size = 0;
 
-    ret = avcodec_encode_video2(video_codec_ctx_, &enc_pkt, yuv_frame_, &enc_got_frame);
-
-    if (enc_got_frame == 1)
+again:
+    int ret = avcodec_send_frame(video_codec_ctx_, yuv_frame_);
+    if (ret != 0)
     {
-        //printf("Succeed to encode frame: %5d\tsize:%5d\n", framecnt, enc_pkt.size);
-
-        if (first_video_ts2_ == -1)
+        if (ret == AVERROR(EAGAIN))
         {
-            first_video_ts2_ = timestamp;
+            return 0;
         }
 
-        enc_pkt.stream_index = video_stream_->index;
-
-#if 0
-        //Write PTS
-        AVRational time_base = video_st->time_base;//{ 1, 1000 };
-        AVRational r_framerate1 = input_st->r_frame_rate;//{ 50, 2 };
-        //Duration between 2 frames (us)
-        // int64_t calc_duration = (double)(AV_TIME_BASE)*(1 / av_q2d(r_framerate1));    //内部时间戳
-        int64_t calc_pts = (double)m_vid_framecnt * (AV_TIME_BASE) * (1 / av_q2d(r_framerate1));
-
-        //Parameters
-        enc_pkt.pts = av_rescale_q(calc_pts, time_base_q, time_base);  //enc_pkt.pts = (double)(framecnt*calc_duration)*(double)(av_q2d(time_base_q)) / (double)(av_q2d(time_base));
-        enc_pkt.dts = enc_pkt.pts;
-        //enc_pkt.duration = av_rescale_q(calc_duration, time_base_q, time_base); //(double)(calc_duration)*(double)(av_q2d(time_base_q)) / (double)(av_q2d(time_base));
-        //enc_pkt.pos = -1;
-#else
-        //enc_pkt.pts= av_rescale_q(lTimeStamp, time_base_q, video_st->time_base);
-        enc_pkt.pts = (int64_t)video_stream_->time_base.den * timestamp / AV_TIME_BASE;
-#endif
-
-        video_frame_count_++;
-
-        ////Delay
-        //int64_t pts_time = av_rescale_q(enc_pkt.pts, time_base, time_base_q);
-        //int64_t now_time = av_gettime() - start_time;
-        //if ((pts_time > now_time) && ((vid_next_pts + pts_time - now_time)<aud_next_pts))
-        //  av_usleep(pts_time - now_time);
-
-        ret = av_interleaved_write_frame(fmt_ctx_, &enc_pkt);
-        if (ret < 0)
-        {
-//            char tmpErrString[128] = {0};
-//            ATLTRACE("Could not write video frame, error: %s\n", av_make_error_string(tmpErrString, AV_ERROR_MAX_STRING_SIZE, ret));
-            return ret;
-        }
+        qDebug() << "avcodec_send_frame failed, ret:" << ret;
+        return -1;
     }
-    else if (ret == 0)
+
+    ret = avcodec_receive_packet(video_codec_ctx_, &pkt);
+    if (ret != 0)
     {
-//        ATLTRACE("Buffer video frame, timestamp: %I64d.\n", lTimeStamp); //编码器缓冲帧
+        if (ret == AVERROR(EAGAIN))
+        {
+            goto again;
+        }
+
+        qDebug() << "avcodec_receive_packet failed, ret:" << ret;
+        return -1;
+    }
+
+    if (-1 == first_video_ts2_)
+    {
+        first_video_ts2_ = timestamp;
+        qDebug() << "first video ts2:" << first_video_ts2_;
+    }
+
+    pkt.stream_index = video_stream_->index;
+    pkt.pts = (int64_t)video_stream_->time_base.den * timestamp / AV_TIME_BASE;
+
+//    int enc_got_frame = 0;
+
+//    int ret = avcodec_encode_video2(video_codec_ctx_, &enc_pkt, yuv_frame_, &enc_got_frame);
+
+//    if (enc_got_frame == 1)
+//    {
+//        //printf("Succeed to encode frame: %5d\tsize:%5d\n", framecnt, enc_pkt.size);
+
+//        if (first_video_ts2_ == -1)
+//        {
+//            first_video_ts2_ = timestamp;
+//        }
+
+//        enc_pkt.stream_index = video_stream_->index;
+
+//#if 0
+//        //Write PTS
+//        AVRational time_base = video_st->time_base;//{ 1, 1000 };
+//        AVRational r_framerate1 = input_st->r_frame_rate;//{ 50, 2 };
+//        //Duration between 2 frames (us)
+//        // int64_t calc_duration = (double)(AV_TIME_BASE)*(1 / av_q2d(r_framerate1));    //内部时间戳
+//        int64_t calc_pts = (double)m_vid_framecnt * (AV_TIME_BASE) * (1 / av_q2d(r_framerate1));
+
+//        //Parameters
+//        enc_pkt.pts = av_rescale_q(calc_pts, time_base_q, time_base);  //enc_pkt.pts = (double)(framecnt*calc_duration)*(double)(av_q2d(time_base_q)) / (double)(av_q2d(time_base));
+//        enc_pkt.dts = enc_pkt.pts;
+//        //enc_pkt.duration = av_rescale_q(calc_duration, time_base_q, time_base); //(double)(calc_duration)*(double)(av_q2d(time_base_q)) / (double)(av_q2d(time_base));
+//        //enc_pkt.pos = -1;
+//#else
+//        //enc_pkt.pts= av_rescale_q(lTimeStamp, time_base_q, video_st->time_base);
+//        enc_pkt.pts = (int64_t)video_stream_->time_base.den * timestamp / AV_TIME_BASE;
+//#endif
+
+    ++video_frame_count_;
+
+    ////Delay
+    //int64_t pts_time = av_rescale_q(enc_pkt.pts, time_base, time_base_q);
+    //int64_t now_time = av_gettime() - start_time;
+    //if ((pts_time > now_time) && ((vid_next_pts + pts_time - now_time)<aud_next_pts))
+    //  av_usleep(pts_time - now_time);
+
+    ret = av_interleaved_write_frame(fmt_ctx_, &pkt);
+    if (ret < 0)
+    {
+        char err_msg[AV_ERROR_MAX_STRING_SIZE] = "";
+        av_make_error_string(err_msg, sizeof(err_msg), ret);
+
+        qDebug() << "failed to write video frame, err msg:" << QString::fromStdString(err_msg);
+        return ret;
     }
 
     return 0;
@@ -485,17 +502,16 @@ int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input
         return -1;
     }
 
+    qDebug() << "audio timestamp:" << timestamp;
+
     if (-1 == first_audio_ts_)
     {
-//        TRACE("First Audio timestamp: %ld \n", lTimeStamp);
         first_audio_ts_ = timestamp;
+        qDebug() << "first audio ts:" << first_audio_ts_;
     }
 
-    int ret = avcodec_parameters_to_context(audio_codec_ctx_, audio_stream_->codecpar);
-    if (ret < 0)
-    {
-        return -1;
-    }
+    AVCodecContext* input_codec_ctx = input_stream->codec;
+    audio_codec_ctx_ = audio_stream_->codec;
 
     const int output_frame_size = audio_codec_ctx_->frame_size;
     AVRational time_base_q = { 1, AV_TIME_BASE };
@@ -506,8 +522,8 @@ int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input
     //  return 0;
     //}
 
-    const int fifo_samples = av_audio_fifo_size(audio_fifo_);
-    int64_t timeshift = (int64_t)fifo_samples * AV_TIME_BASE / (int64_t)(input_stream->codec->sample_rate); // 因为Fifo里有之前未读完的数据，所以从Fifo队列里面取出的第一个音频包的时间戳等于当前时间减掉缓冲部分的时长
+    const int fifo_samples = av_audio_fifo_size(audio_fifo_); // number of samples available for reading
+    const int64_t timeshift = (int64_t)fifo_samples * AV_TIME_BASE / (int64_t)(input_codec_ctx->sample_rate); // 因为Fifo里有之前未读完的数据，所以从Fifo队列里面取出的第一个音频包的时间戳等于当前时间减掉缓冲部分的时长
 
 //    TRACE("audio time diff: %I64d \n", lTimeStamp - timeshift - m_nLastAudioPresentationTime); //理论上该差值稳定在一个水平，如果差值一直变大（在某些采集设备上发现有此现象），则会有视音频不同步的问题，具体产生的原因不清楚
     audio_frame_count_ += input_frame->nb_samples;
@@ -519,12 +535,13 @@ int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input
                                               av_get_default_channel_layout(audio_codec_ctx_->channels),
                                               audio_codec_ctx_->sample_fmt,
                                               audio_codec_ctx_->sample_rate,
-                                              av_get_default_channel_layout(input_stream->codec->channels),
-                                              input_stream->codec->sample_fmt,
-                                              input_stream->codec->sample_rate,
+                                              av_get_default_channel_layout(input_codec_ctx->channels),
+                                              input_codec_ctx->sample_fmt,
+                                              input_codec_ctx->sample_rate,
                                               0, nullptr);
         if (nullptr == aud_convert_ctx_)
         {
+            qDebug() << "swr_alloc_set_opts failed";
             return -1;
         }
 
@@ -543,13 +560,11 @@ int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input
     * block for convenience.
     */
     // TODO 内存泄露
-    ret = av_samples_alloc(converted_input_samples_, nullptr,
-                           audio_codec_ctx_->channels, input_frame->nb_samples, audio_codec_ctx_->sample_fmt, 0);
+    int ret = av_samples_alloc(converted_input_samples_, nullptr,
+                               audio_codec_ctx_->channels, input_frame->nb_samples, audio_codec_ctx_->sample_fmt, 0);
     if (ret < 0)
     {
-//        ATLTRACE("Could not allocate converted input samples\n");
-        av_freep(&(*converted_input_samples_)[0]);
-        free(*converted_input_samples_);
+        qDebug() << "av_samples_alloc failed";
         return ret;
     }
 
@@ -563,7 +578,8 @@ int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input
                       (const uint8_t**) input_frame->extended_data, input_frame->nb_samples);
     if (ret < 0)
     {
-//        ATLTRACE("Could not convert input samples\n");
+        qDebug() << "swr_convert failed";
+//        av_freep(&converted_input_samples_[0]);
         return ret;
     }
 
@@ -576,18 +592,23 @@ int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input
     ret = av_audio_fifo_realloc(audio_fifo_, av_audio_fifo_size(audio_fifo_) + input_frame->nb_samples);
     if (ret < 0)
     {
-//        ATLTRACE("Could not reallocate FIFO\n");
+        qDebug() << "av_audio_fifo_realloc failed";
         return ret;
     }
 
     /** Store the new samples in the FIFO buffer. */
     if (av_audio_fifo_write(audio_fifo_, (void**) converted_input_samples_, input_frame->nb_samples) < input_frame->nb_samples)
     {
-//        ATLTRACE("Could not write data to FIFO\n");
+        qDebug() << "av_audio_fifo_write failed";
         return -1;
     }
 
-    const int64_t timeinc = (int64_t)audio_codec_ctx_->frame_size * AV_TIME_BASE / (int64_t)(input_stream->codec->sample_rate);
+//    for (int i = 0; i < audio_codec_ctx_->channels; ++i)
+//    {
+    av_freep(&converted_input_samples_[0]);
+//    }
+
+    const int64_t timeinc = (int64_t)audio_codec_ctx_->frame_size * AV_TIME_BASE / (int64_t)(input_codec_ctx->sample_rate);
 
     // 当前帧的时间戳不能小于上一帧的值
     if (timestamp - timeshift > last_audio_pts_)
@@ -602,9 +623,10 @@ int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input
         */
     {
         /** Temporary storage of the output samples of the frame written to the file. */
-        AVFrame* output_frame = av_frame_alloc();
-        if (nullptr == output_frame)
+        AVFrame* oframe = av_frame_alloc();
+        if (nullptr == oframe)
         {
+            qDebug() << "av_frame_alloc failed";
             return -1;
         }
 
@@ -615,7 +637,6 @@ int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input
         */
         const int frame_size = FFMIN(av_audio_fifo_size(audio_fifo_), audio_codec_ctx_->frame_size);
 
-
         /** Initialize temporary storage for one output frame. */
         /**
         * Set the frame's parameters, especially its size and format.
@@ -624,20 +645,20 @@ int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input
         * Default channel layouts based on the number of channels
         * are assumed for simplicity.
         */
-        output_frame->nb_samples = frame_size;
-        output_frame->channel_layout = audio_codec_ctx_->channel_layout;
-        output_frame->format = audio_codec_ctx_->sample_fmt;
-        output_frame->sample_rate = audio_codec_ctx_->sample_rate;
+        oframe->nb_samples = frame_size;
+        oframe->channel_layout = audio_codec_ctx_->channel_layout;
+        oframe->format = audio_codec_ctx_->sample_fmt;
+        oframe->sample_rate = audio_codec_ctx_->sample_rate;
 
         /**
         * Allocate the samples of the created frame. This call will make
         * sure that the audio frame can hold as many samples as specified.
         */
-        ret = av_frame_get_buffer(output_frame, 0);
+        ret = av_frame_get_buffer(oframe, 0);
         if (ret < 0)
         {
-//            ATLTRACE("Could not allocate output frame samples\n");
-            av_frame_free(&output_frame);
+            qDebug() << "av_frame_get_buffer failed";
+            av_frame_free(&oframe);
             return ret;
         }
 
@@ -645,75 +666,108 @@ int  AVOutputStream::WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input
         * Read as many samples from the FIFO buffer as required to fill the frame.
         * The samples are stored in the frame temporarily.
         */
-        if (av_audio_fifo_read(audio_fifo_, (void**) output_frame->data, frame_size) < frame_size)
+        if (av_audio_fifo_read(audio_fifo_, (void**) oframe->data, frame_size) < frame_size)
         {
-//            ATLTRACE("Could not read data from FIFO\n");
-            av_frame_free(&output_frame);
+            qDebug() << "av_audio_fifo_read failed";
+            av_frame_free(&oframe);
             return -1;
         }
 
         /** Encode one frame worth of audio samples. */
         /** Packet used for temporary storage. */
-        AVPacket enc_pkt;
-        av_init_packet(&enc_pkt);
-        enc_pkt.data = nullptr;
-        enc_pkt.size = 0;
+        AVPacket pkt;
 
-        int enc_got_frame_a = 0;
+        av_init_packet(&pkt);
+        pkt.data = nullptr;
+        pkt.size = 0;
 
-        /**
-        * Encode the audio frame and store it in the temporary packet.
-        * The output audio stream encoder is used to do this.
-        */
-        if ((ret = avcodec_encode_audio2(audio_codec_ctx_, &enc_pkt, output_frame, &enc_got_frame_a)) < 0)
+again:
+        int ret = avcodec_send_frame(audio_codec_ctx_, oframe);
+        if (ret != 0)
         {
-//            ATLTRACE("Could not encode frame\n");
-            av_frame_free(&output_frame);
+            av_frame_free(&oframe);
+
+            if (ret == AVERROR(EAGAIN))
+            {
+                break;
+            }
+
+            qDebug() << "avcodec_send_frame failed, ret:" << ret;
+            return -1;
+        }
+
+        ret = avcodec_receive_packet(video_codec_ctx_, &pkt);
+        if (ret != 0)
+        {
+            if (ret == AVERROR(EAGAIN))
+            {
+                goto again;
+            }
+
+            qDebug() << "avcodec_receive_packet failed, ret:" << ret;
+            av_frame_free(&oframe);
+            return -1;
+        }
+
+        pkt.stream_index = audio_stream_->index;
+        pkt.pts = av_rescale_q(last_audio_pts_, time_base_q, audio_stream_->time_base);
+
+//        int enc_got_frame_a = 0;
+
+//        /**
+//        * Encode the audio frame and store it in the temporary packet.
+//        * The output audio stream encoder is used to do this.
+//        */
+//        if ((ret = avcodec_encode_audio2(audio_codec_ctx_, &pkt, oframe, &enc_got_frame_a)) < 0)
+//        {
+////            ATLTRACE("Could not encode frame\n");
+//            av_frame_free(&oframe);
+//            return ret;
+//        }
+
+
+//        /** Write one audio frame from the temporary packet to the output file. */
+//        if (enc_got_frame_a)
+//        {
+//            //output_packet.flags |= AV_PKT_FLAG_KEY;
+//            pkt.stream_index = audio_stream_->index;
+
+//#if 0
+//            AVRational r_framerate1 = { input_st->codec->sample_rate, 1 };// { 44100, 1};
+//            //int64_t calc_duration = (double)(AV_TIME_BASE)*(1 / av_q2d(r_framerate1));  //内部时间戳
+//            int64_t calc_pts = (double)m_nb_samples * (AV_TIME_BASE) * (1 / av_q2d(r_framerate1));
+
+//            output_packet.pts = av_rescale_q(calc_pts, time_base_q, audio_st->time_base);
+//            //output_packet.dts = output_packet.pts;
+//            //output_packet.duration = output_frame->nb_samples;
+//#else
+//            pkt.pts = av_rescale_q(last_audio_pts_, time_base_q, audio_stream_->time_base);
+
+//#endif
+
+        //ATLTRACE("audio pts : %ld\n", output_packet.pts);
+
+        //int64_t pts_time = av_rescale_q(output_packet.pts, time_base, time_base_q);
+        //int64_t now_time = av_gettime() - start_time;
+        //if ((pts_time > now_time) && ((aud_next_pts + pts_time - now_time)<vid_next_pts))
+        //  av_usleep(pts_time - now_time);
+
+        ret = av_interleaved_write_frame(fmt_ctx_, &pkt);
+        if (ret < 0)
+        {
+            char err_msg[AV_ERROR_MAX_STRING_SIZE] = "";
+            av_make_error_string(err_msg, sizeof(err_msg), ret);
+
+            qDebug() << "failed to write audio frame, err msg:" << QString::fromStdString(err_msg);
+            av_frame_free(&oframe);
             return ret;
         }
 
-
-        /** Write one audio frame from the temporary packet to the output file. */
-        if (enc_got_frame_a)
-        {
-            //output_packet.flags |= AV_PKT_FLAG_KEY;
-            enc_pkt.stream_index = audio_stream_->index;
-
-#if 0
-            AVRational r_framerate1 = { input_st->codec->sample_rate, 1 };// { 44100, 1};
-            //int64_t calc_duration = (double)(AV_TIME_BASE)*(1 / av_q2d(r_framerate1));  //内部时间戳
-            int64_t calc_pts = (double)m_nb_samples * (AV_TIME_BASE) * (1 / av_q2d(r_framerate1));
-
-            output_packet.pts = av_rescale_q(calc_pts, time_base_q, audio_st->time_base);
-            //output_packet.dts = output_packet.pts;
-            //output_packet.duration = output_frame->nb_samples;
-#else
-            enc_pkt.pts = av_rescale_q(last_audio_pts_, time_base_q, audio_stream_->time_base);
-
-#endif
-
-            //ATLTRACE("audio pts : %ld\n", output_packet.pts);
-
-            //int64_t pts_time = av_rescale_q(output_packet.pts, time_base, time_base_q);
-            //int64_t now_time = av_gettime() - start_time;
-            //if ((pts_time > now_time) && ((aud_next_pts + pts_time - now_time)<vid_next_pts))
-            //  av_usleep(pts_time - now_time);
-
-            ret = av_interleaved_write_frame(fmt_ctx_, &enc_pkt);
-            if (ret < 0)
-            {
-//                char tmpErrString[128] = {0};
-//                ATLTRACE("Could not write audio frame, error: %s\n", av_make_error_string(tmpErrString, AV_ERROR_MAX_STRING_SIZE, ret));
-                av_frame_free(&output_frame);
-                return ret;
-            }
-        }//if (enc_got_frame_a)
-
-        nb_samples_ += output_frame->nb_samples;
+        nb_samples_ += oframe->nb_samples;
         last_audio_pts_ += timeinc;
 
-        av_frame_free(&output_frame);
-    }//while
+        av_frame_free(&oframe);
+    }
 
     return 0;
 }

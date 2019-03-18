@@ -28,7 +28,7 @@ public:
     void SetAudioCodecProp(AVCodecID codec_id, int sample_rate, int channels, int bit_rate);
 
     // 创建编码器和混合器，打开输出
-    int Open(const std::string& file_path);
+    int Open(const std::string& url); // url可以是本地文件路径，也可以是rtmp流地址
 
     // 关闭输出
     void Close();
@@ -37,7 +37,7 @@ public:
 //    主要是因为输入的音频和编码后的音频的frame_size不一样，中间需要一个Fifo作缓冲队列。
 //    另外时间戳PTS的计算也是很关键的，弄得不好保存的文件播放视音频就不同步
     // 写入一帧图像
-    int WriteVideoFrame(AVStream* input_stream, AVPixelFormat input_pix_fmt, AVFrame* input_frame, int64_t timestamp);
+    int WriteVideoFrame(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp);
 
     // 写入一帧音频
     int WriteMicrophoneFrame(AVStream* input_stream, AVFrame* input_frame, int64_t timestamp);
@@ -60,13 +60,13 @@ private:
     AVFormatContext* fmt_ctx_;
     AVCodecContext* video_codec_ctx_;
     AVStream* video_stream_; // 里面含有video_codec_ctx
-    AVFrame* yuv_frame_;
-    uint8_t* out_buffer_;
+    AVFrame* yuv_frame_; // TODO 内存管理？一帧使用完毕后怎么释放？
+    uint8_t* out_buf_; // TODO 内存管理？一帧使用完毕后怎么释放？
 
     AVCodecContext* audio_codec_ctx_;
     AVStream* audio_stream_; // 里面含有audio_codec_ctx
     AVAudioFifo* audio_fifo_;
-    uint8_t** converted_input_samples_;
+    uint8_t** converted_input_samples_; // TODO 内存管理？一帧使用完毕后怎么释放？
 
     int video_frame_count_;
     int audio_frame_count_;

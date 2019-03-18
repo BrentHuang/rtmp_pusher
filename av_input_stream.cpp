@@ -50,26 +50,37 @@ void AVInputStream::SetSpeakerOpts()
 
 }
 
-void AVInputStream::SetVideoCaptureCB(VideoCaptureCB cb)
+void AVInputStream::SetVideoCaptureCB(CaptureCB cb)
 {
     video_capture_.SetCaptureCB(cb);
 }
 
-void AVInputStream::SetMicrophoneCaptureCB(AudioCaptureCB cb)
+void AVInputStream::SetMicrophoneCaptureCB(CaptureCB cb)
 {
     microphone_.SetCaptureCB(cb);
 }
 
-void AVInputStream::SetSpeakerCaptureCB(AudioCaptureCB cb)
+void AVInputStream::SetSpeakerCaptureCB(CaptureCB cb)
 {
     speaker_.SetCaptureCB(cb);
 }
 
 int AVInputStream::Open()
 {
-    video_capture_.Open(true);
-    microphone_.Open(false);
-    speaker_.Open(false);
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA) || GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP))
+    {
+        video_capture_.Open(true);
+    }
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE))
+    {
+        microphone_.Open(false);
+    }
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_SPEAKER))
+    {
+        speaker_.Open(false);
+    }
 
     return 0;
 }
@@ -78,18 +89,40 @@ void AVInputStream::Close()
 {
     GLOBAL->thread_exit = true;
 
-    video_capture_.Close();
-    microphone_.Close();
-    speaker_.Close();
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA) || GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP))
+    {
+        video_capture_.Close();
+    }
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE))
+    {
+        microphone_.Close();
+    }
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_SPEAKER))
+    {
+        speaker_.Close();
+    }
 }
 
 int AVInputStream::StartCapture()
 {
     const int64_t start_time = av_gettime();
 
-    video_capture_.StartCapture(start_time);
-    microphone_.StartCapture(start_time);
-    speaker_.StartCapture(start_time);
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA) || GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP))
+    {
+        video_capture_.StartCapture(start_time);
+    }
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE))
+    {
+        microphone_.StartCapture(start_time);
+    }
+
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_SPEAKER))
+    {
+        speaker_.StartCapture(start_time);
+    }
 
     GLOBAL->thread_exit = false;
     return 0;

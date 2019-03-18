@@ -19,9 +19,9 @@ public:
     void SetMicrophoneOpts();
     void SetSpeakerOpts();
 
-    void SetVideoCaptureCB(VideoCaptureCB cb);
-    void SetMicrophoneCaptureCB(AudioCaptureCB cb);
-    void SetSpeakerCaptureCB(AudioCaptureCB cb);
+    void SetVideoCaptureCB(CaptureCB cb);
+    void SetMicrophoneCaptureCB(CaptureCB cb);
+    void SetSpeakerCaptureCB(CaptureCB cb);
 
     int Open();
     void Close();

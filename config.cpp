@@ -3,12 +3,12 @@
 #include <QMutexLocker>
 #include <qsystemdetection.h>
 
-Config::Config() : mutex_(), video_device_(), audio_device_(),
-    audio2_device_(), compos_vec_(), compos_(), file_path_()
+Config::Config() : mutex_(), video_device_(), microphone_(),
+    speaker_(), compos_vec_(), compos_(), file_path_()
 {
     std::bitset<COMPOS_BIT_MAX> compos;
     compos.set();
-    compos.reset(COMPOS_BIT_SYSTEM_VOICE);
+    compos.reset(COMPOS_BIT_SPEAKER);
     compos.reset(COMPOS_BIT_DESKTOP);
 //    qDebug() << QString::fromStdString(compos.to_string()); // 1100
     compos_vec_.push_back(compos);
@@ -19,14 +19,14 @@ Config::Config() : mutex_(), video_device_(), audio_device_(),
     compos_vec_.push_back(compos);
 
     compos.set();
-    compos.reset(COMPOS_BIT_SYSTEM_VOICE);
+    compos.reset(COMPOS_BIT_SPEAKER);
     compos.reset(COMPOS_BIT_DESKTOP);
     compos.reset(COMPOS_BIT_CAMERA);
 //    qDebug() << QString::fromStdString(compos.to_string()); // 1000
     compos_vec_.push_back(compos);
 
     compos.set();
-    compos.reset(COMPOS_BIT_SYSTEM_VOICE);
+    compos.reset(COMPOS_BIT_SPEAKER);
     compos.reset(COMPOS_BIT_DESKTOP);
     compos.reset(COMPOS_BIT_MICROPHONE);
 //    qDebug() << QString::fromStdString(compos.to_string()); // 0100
@@ -41,13 +41,13 @@ Config::Config() : mutex_(), video_device_(), audio_device_(),
     compos.set();
     compos.reset(COMPOS_BIT_CAMERA);
     compos.reset(COMPOS_BIT_MICROPHONE);
-    compos.reset(COMPOS_BIT_SYSTEM_VOICE);
+    compos.reset(COMPOS_BIT_SPEAKER);
 //    qDebug() << QString::fromStdString(compos.to_string()); // 0010
     compos_vec_.push_back(compos);
 
     compos.set();
     compos.reset(COMPOS_BIT_CAMERA);
-    compos.reset(COMPOS_BIT_SYSTEM_VOICE);
+    compos.reset(COMPOS_BIT_SPEAKER);
 //    qDebug() << QString::fromStdString(compos.to_string()); // 1010
     compos_vec_.push_back(compos);
 
@@ -76,28 +76,28 @@ std::string Config::GetVideoCaptureDevice()
     return video_device_;
 }
 
-void Config::SetAudioCaptureDevice(const std::string& device_name)
+void Config::SetMicrophone(const std::string& device_name)
 {
     QMutexLocker lock(&mutex_);
-    audio_device_ = device_name;
+    microphone_ = device_name;
 }
 
-std::string Config::GetAudioCaptureDevice()
+std::string Config::GetMicrophone()
 {
     QMutexLocker lock(&mutex_);
-    return audio_device_;
+    return microphone_;
 }
 
-void Config::SetAudio2CaptureDevice(const std::string& device_name)
+void Config::SetSpeaker(const std::string& device_name)
 {
     QMutexLocker lock(&mutex_);
-    audio2_device_ = device_name;
+    speaker_ = device_name;
 }
 
-std::string Config::GetAudio2CaptureDevice()
+std::string Config::GetSpeaker()
 {
     QMutexLocker lock(&mutex_);
-    return audio2_device_;
+    return speaker_;
 }
 
 bool Config::IsValidComposSet()
