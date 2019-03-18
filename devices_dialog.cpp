@@ -166,8 +166,8 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
     ui->setupUi(this);
 
     QButtonGroup* button_group = new QButtonGroup(this);
-    button_group->addButton(ui->checkBox_Video, 1);
-    button_group->addButton(ui->checkBox_VideoDesktop, 2);
+    button_group->addButton(ui->checkBox_Camera, 1);
+    button_group->addButton(ui->checkBox_Desktop, 2);
 
 //#if defined(Q_OS_WIN)
 //    std::vector<DShow::VideoDevice> video_devices;
@@ -302,7 +302,7 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
         qDebug() << adi.deviceName() << adi.supportedSampleRates() << adi.supportedSampleSizes()
                  << adi.supportedSampleTypes() << adi.supportedByteOrders()
                  << adi.supportedChannelCounts();
-        ui->comboBox_Audio->addItem(adi.deviceName());
+        ui->comboBox_Microphone->addItem(adi.deviceName());
     }
 
     qDebug() << "audio output devices:";
@@ -311,7 +311,7 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
         qDebug() << adi.deviceName() << adi.supportedSampleRates() << adi.supportedSampleSizes()
                  << adi.supportedSampleTypes() << adi.supportedByteOrders()
                  << adi.supportedChannelCounts();
-        ui->comboBox_AudioSpeaker->addItem(adi.deviceName());
+        ui->comboBox_Speaker->addItem(adi.deviceName());
     }
 
     if (!last_video_device_.isEmpty())
@@ -319,20 +319,20 @@ DevicesDialog::DevicesDialog(QWidget* parent) :
         ui->comboBox_Video->setCurrentText(last_video_device_);
     }
 
-    if (!last_audio_device_.isEmpty())
+    if (!last_microphone_.isEmpty())
     {
-        ui->comboBox_Audio->setCurrentText(last_audio_device_);
+        ui->comboBox_Microphone->setCurrentText(last_microphone_);
     }
 
-    if (!last_audio2_device_.isEmpty())
+    if (!last_speaker_.isEmpty())
     {
-        ui->comboBox_AudioSpeaker->setCurrentText(last_audio2_device_);
+        ui->comboBox_Speaker->setCurrentText(last_speaker_);
     }
 
-    ui->checkBox_Video->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA));
-    ui->checkBox_Audio->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE));
-    ui->checkBox_VideoDesktop->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP));
-    ui->checkBox_AudioSystem->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_SPEAKER));
+    ui->checkBox_Camera->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA));
+    ui->checkBox_Microphone->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE));
+    ui->checkBox_Desktop->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP));
+    ui->checkBox_Speaker->setChecked(GLOBAL->config.TestCompos(COMPOS_BIT_SPEAKER));
 
     if (!GLOBAL->config.GetFilePath().empty())
     {
@@ -418,15 +418,15 @@ void DevicesDialog::on_comboBox_Video_currentIndexChanged(const QString& arg1)
 #endif
 }
 
-void DevicesDialog::on_comboBox_Audio_currentIndexChanged(const QString& arg1)
+void DevicesDialog::on_comboBox_Microphone_currentIndexChanged(const QString& arg1)
 {
-    last_audio_device_ = QString::fromStdString(GLOBAL->config.GetMicrophone());
+    last_microphone_ = QString::fromStdString(GLOBAL->config.GetMicrophone());
     GLOBAL->config.SetMicrophone(arg1.toStdString());
 }
 
-void DevicesDialog::on_comboBox_AudioSpeaker_currentIndexChanged(const QString& arg1)
+void DevicesDialog::on_comboBox_Speaker_currentIndexChanged(const QString& arg1)
 {
-    last_audio2_device_ = QString::fromStdString(GLOBAL->config.GetSpeaker());
+    last_speaker_ = QString::fromStdString(GLOBAL->config.GetSpeaker());
     GLOBAL->config.SetSpeaker(arg1.toStdString());
 }
 
@@ -464,26 +464,26 @@ void DevicesDialog::on_pushButton_Dir_clicked()
     }
 }
 
-void DevicesDialog::on_checkBox_Audio_stateChanged(int arg1)
+void DevicesDialog::on_checkBox_Microphone_stateChanged(int arg1)
 {
     (void) arg1;
-    GLOBAL->config.SetCompos(COMPOS_BIT_MICROPHONE, ui->checkBox_Audio->isChecked());
+    GLOBAL->config.SetCompos(COMPOS_BIT_MICROPHONE, ui->checkBox_Microphone->isChecked());
 }
 
-void DevicesDialog::on_checkBox_Video_stateChanged(int arg1)
+void DevicesDialog::on_checkBox_Camera_stateChanged(int arg1)
 {
     (void) arg1;
-    GLOBAL->config.SetCompos(COMPOS_BIT_CAMERA, ui->checkBox_Video->isChecked());
+    GLOBAL->config.SetCompos(COMPOS_BIT_CAMERA, ui->checkBox_Camera->isChecked());
 }
 
-void DevicesDialog::on_checkBox_AudioSystem_stateChanged(int arg1)
+void DevicesDialog::on_checkBox_Speaker_stateChanged(int arg1)
 {
     (void) arg1;
-    GLOBAL->config.SetCompos(COMPOS_BIT_SPEAKER, ui->checkBox_AudioSystem->isChecked());
+    GLOBAL->config.SetCompos(COMPOS_BIT_SPEAKER, ui->checkBox_Speaker->isChecked());
 }
 
-void DevicesDialog::on_checkBox_VideoDesktop_stateChanged(int arg1)
+void DevicesDialog::on_checkBox_Desktop_stateChanged(int arg1)
 {
     (void) arg1;
-    GLOBAL->config.SetCompos(COMPOS_BIT_DESKTOP, ui->checkBox_VideoDesktop->isChecked());
+    GLOBAL->config.SetCompos(COMPOS_BIT_DESKTOP, ui->checkBox_Desktop->isChecked());
 }

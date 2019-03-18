@@ -86,21 +86,21 @@ void MainWindow::OnStartStream()
 #elif defined(Q_OS_LINUX)
     if (GLOBAL->config.TestCompos(COMPOS_BIT_CAMERA))
     {
-        input_stream_.SetVideoCaptureDevice("video4linux2", GLOBAL->config.GetVideoCaptureDevice(), false);
+        input_stream_.SetVideoDeviceName("video4linux2", GLOBAL->config.GetVideoCaptureDevice(), false);
     }
     else if (GLOBAL->config.TestCompos(COMPOS_BIT_DESKTOP))
     {
-        input_stream_.SetVideoCaptureDevice("x11grab", "desktop", false);
+        input_stream_.SetVideoDeviceName("x11grab", "desktop", false);
     }
 
     if (GLOBAL->config.TestCompos(COMPOS_BIT_MICROPHONE))
     {
-        input_stream_.SetAudioCaptureDevice("alsa", GLOBAL->config.GetMicrophone(), false);
+        input_stream_.SetMicrophoneName("alsa", GLOBAL->config.GetMicrophone(), false);
     }
 
-    if (GLOBAL->config.TestCompos(COMPOS_BIT_SYSTEM_VOICE))
+    if (GLOBAL->config.TestCompos(COMPOS_BIT_SPEAKER))
     {
-        input_stream_.SetAudio2CaptureDevice("alsa", GLOBAL->config.GetSpeaker(), false);
+        input_stream_.SetSpeakerName("alsa", GLOBAL->config.GetSpeaker(), false);
     }
 #endif
 

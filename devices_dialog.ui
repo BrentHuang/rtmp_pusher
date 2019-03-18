@@ -25,7 +25,7 @@
    <property name="title">
     <string>音频输入设备</string>
    </property>
-   <widget class="QComboBox" name="comboBox_Audio">
+   <widget class="QComboBox" name="comboBox_Microphone">
     <property name="geometry">
      <rect>
       <x>11</x>
@@ -143,7 +143,7 @@
    <property name="title">
     <string>音视频采集源</string>
    </property>
-   <widget class="QCheckBox" name="checkBox_Audio">
+   <widget class="QCheckBox" name="checkBox_Microphone">
     <property name="geometry">
      <rect>
       <x>20</x>
@@ -156,7 +156,7 @@
      <string>麦克风</string>
     </property>
    </widget>
-   <widget class="QCheckBox" name="checkBox_AudioSystem">
+   <widget class="QCheckBox" name="checkBox_Speaker">
     <property name="geometry">
      <rect>
       <x>20</x>
@@ -169,7 +169,7 @@
      <string>系统声音</string>
     </property>
    </widget>
-   <widget class="QCheckBox" name="checkBox_VideoDesktop">
+   <widget class="QCheckBox" name="checkBox_Desktop">
     <property name="geometry">
      <rect>
       <x>20</x>
@@ -182,7 +182,7 @@
      <string>系统桌面</string>
     </property>
    </widget>
-   <widget class="QCheckBox" name="checkBox_Video">
+   <widget class="QCheckBox" name="checkBox_Camera">
     <property name="geometry">
      <rect>
       <x>20</x>
@@ -208,7 +208,7 @@
    <property name="title">
     <string>扬声器</string>
    </property>
-   <widget class="QComboBox" name="comboBox_AudioSpeaker">
+   <widget class="QComboBox" name="comboBox_Speaker">
     <property name="geometry">
      <rect>
       <x>11</x>
